@@ -1,8 +1,8 @@
 from flask import Flask
-from config import Config
-from models import db
-from routes.students import students_bp
-from routes.attendance import attendance_bp
+from backend.config import Config
+from backend.models import db
+from backend.routes.students import students_bp
+from backend.routes.attendance import attendance_bp
 
 app = Flask(__name__)
 app.config.from_object(Config)
