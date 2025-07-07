@@ -53,7 +53,7 @@ if __name__ == '__main__':
         db.session.commit()
         print(f"Inserted student with ID: {test_student.student_id}")
 
-        # 🟢 Show inserted student(s)
+        # Show inserted student(s)
         students = Student.query.all()
         for s in students:
             print({
@@ -64,4 +64,3 @@ if __name__ == '__main__':
                 'class_id': s.class_id,
                 'guardian_contact': s.guardian_contact
             })
-
