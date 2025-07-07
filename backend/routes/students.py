@@ -1,5 +1,10 @@
-from flask import Blueprint, request, jsonify
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from flask import Flask, Blueprint, request, jsonify
 from models import db, Student
+import datetime
 
 students_bp = Blueprint('students', __name__)
 
@@ -25,3 +30,24 @@ def add_student():
     db.session.add(student)
     db.session.commit()
     return jsonify({'message': 'Student added', 'id': student.student_id}), 201
+
+# 🧪 Local test when running this file directly
+if __name__ == '__main__':
+    app = Flask(__name__)
+    from config import Config
+    app.config.from_object(Config)
+    db.init_app(app)
+
+    with app.app_context():
+        db.create_all()
+        print("Inserting test student...")
+        test_student = Student(
+            full_name="Kellia Teta",
+            gender="F",
+            date_of_birth=datetime.date(2005, 5, 12),
+            class_id=1,
+            guardian_contact="0781234567"
+        )
+        db.session.add(test_student)
+        db.session.commit()
+        print(f"Inserted student with ID: {test_student.student_id}")
