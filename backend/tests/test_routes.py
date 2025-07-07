@@ -1,6 +1,6 @@
 import json
 from backend.app import app
-from models import db
+from backend.models import db
 
 def test_add_student():
     client = app.test_client()
