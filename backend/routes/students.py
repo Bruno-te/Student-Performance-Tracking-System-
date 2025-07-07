@@ -31,7 +31,7 @@ def add_student():
     db.session.commit()
     return jsonify({'message': 'Student added', 'id': student.student_id}), 201
 
-# 🧪 Local test when running this file directly
+#  Local test when running this file directly
 if __name__ == '__main__':
     app = Flask(__name__)
     from config import Config
@@ -41,13 +41,27 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         print("Inserting test student...")
+
         test_student = Student(
-            full_name="Kellia Teta",
+            full_name="Taylor West",
             gender="F",
-            date_of_birth=datetime.date(2005, 5, 12),
+            date_of_birth=datetime.date(2006, 8, 15),
             class_id=1,
-            guardian_contact="0781234567"
+            guardian_contact="0786715414"
         )
         db.session.add(test_student)
         db.session.commit()
         print(f"Inserted student with ID: {test_student.student_id}")
+
+        # 🟢 Show inserted student(s)
+        students = Student.query.all()
+        for s in students:
+            print({
+                'id': s.student_id,
+                'name': s.full_name,
+                'gender': s.gender,
+                'dob': s.date_of_birth,
+                'class_id': s.class_id,
+                'guardian_contact': s.guardian_contact
+            })
+
