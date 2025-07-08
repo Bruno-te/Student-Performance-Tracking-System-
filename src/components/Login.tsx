@@ -62,7 +62,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       {/* Login card */}
       <div className="relative z-20 w-full max-w-md p-8 bg-slate-800/90 rounded-2xl shadow-2xl border border-slate-700">
         <div className="flex flex-col items-center mb-8">
-          <h1 className="text-2xl font-bold text-white">Student Performance Tracking</h1>
+          <h1 className="text-2xl font-bold text-white">URUGENDO+</h1>
           <p className="text-slate-300 text-sm mt-1">Sign in to your account</p>
         </div>
         <form onSubmit={handleLogin} className="space-y-5">

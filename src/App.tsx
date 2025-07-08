@@ -7,10 +7,13 @@ import AssessmentScores from './components/AssessmentScores';
 import ParticipationLogger from './components/ParticipationLogger';
 import BehavioralTracker from './components/BehavioralTracker';
 import LoginForm from './components/Login';
+import AddStudentForm from './components/AddStudentForm';
+import Modal from './components/Modal';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loggedIn, setLoggedIn] = useState(false);
+  const [showAddStudentForm, setShowAddStudentForm] = useState(false);
 
   if (!loggedIn) {
     return <LoginForm onLogin={() => setLoggedIn(true)} />;
@@ -37,10 +40,13 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} onAddStudent={() => setShowAddStudentForm(true)} />
       <main className="ml-64 p-8">
         {renderContent()}
       </main>
+      <Modal isOpen={showAddStudentForm} onClose={() => setShowAddStudentForm(false)} title="Add Student">
+        <AddStudentForm />
+      </Modal>
     </div>
   );
 }

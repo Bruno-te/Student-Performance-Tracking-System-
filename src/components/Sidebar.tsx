@@ -12,9 +12,10 @@ import {
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  onAddStudent?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onAddStudent }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'students', label: 'Student Profiles', icon: Users },
@@ -25,7 +26,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   ];
 
   return (
-    <div className="w-64 bg-white shadow-lg h-screen fixed left-0 top-0 z-30">
+    <div className="w-64 bg-white shadow-lg h-screen fixed left-0 top-0 z-30 flex flex-col justify-between">
       <div className="p-6">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -61,7 +62,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         </ul>
       </nav>
       
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200">
+        <button
+          onClick={onAddStudent}
+          className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-primary text-white rounded-lg font-semibold shadow hover:bg-primary-dark transition-colors mb-4"
+        >
+          <span>+ Add Student</span>
+        </button>
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
             <User className="w-4 h-4 text-gray-600" />

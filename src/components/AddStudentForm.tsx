@@ -1,174 +1,266 @@
-import React, { useState } from 'react';
+"use client"
+
+import type React from "react"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { User, Users, GraduationCap } from "lucide-react"
 
 interface StudentFormData {
-  firstName: string;
-  lastName: string;
-  dob: string;
-  mother: string;
-  father: string;
-  guardian: string;
-  phone: string;
-  location: string;
+  firstName: string
+  lastName: string
+  dateOfBirth: string
+  class: string
+  guardianFirstName: string
+  guardianLastName: string
+  guardianContact: string
 }
 
-const AddStudentForm: React.FC = () => {
-  const [form, setForm] = useState<StudentFormData>({
-    firstName: '',
-    lastName: '',
-    dob: '',
-    mother: '',
-    father: '',
-    guardian: '',
-    phone: '',
-    location: '',
-  });
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [submitted, setSubmitted] = useState(false);
+export default function Component() {
+  const [formData, setFormData] = useState<StudentFormData>({
+    firstName: "",
+    lastName: "",
+    dateOfBirth: "",
+    class: "",
+    guardianFirstName: "",
+    guardianLastName: "",
+    guardianContact: "",
+  })
 
-  const validate = () => {
-    const newErrors: { [key: string]: string } = {};
-    if (!form.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!form.lastName.trim()) newErrors.lastName = 'Last name is required';
-    if (!form.dob) newErrors.dob = 'Date of birth is required';
-    if (!form.phone.trim()) newErrors.phone = 'Phone number is required';
-    else if (!/^\+?\d{9,15}$/.test(form.phone.trim())) newErrors.phone = 'Enter a valid phone number';
-    if (!form.location.trim()) newErrors.location = 'Location is required';
-    if (!form.mother.trim() && !form.father.trim() && !form.guardian.trim()) {
-      newErrors.guardian = 'At least one of mother, father, or guardian is required';
+  const [errors, setErrors] = useState<Partial<StudentFormData>>({})
+
+  const validateEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
+
+  const validatePhone = (phone: string) => {
+    return /^[+]?[1-9][\d\s\-()]{7,15}$/.test(phone.replace(/[\s\-()]/g, ""))
+  }
+
+  const validateContact = (contact: string) => {
+    return validateEmail(contact) || validatePhone(contact)
+  }
+
+  const handleInputChange = (field: keyof StudentFormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }))
     }
-    return newErrors;
-  };
+  }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: '' });
-  };
+  const validateForm = (): boolean => {
+    const newErrors: Partial<StudentFormData> = {}
+
+    if (!formData.firstName.trim() || formData.firstName.length < 2) {
+      newErrors.firstName = "First name must be at least 2 characters"
+    }
+
+    if (!formData.lastName.trim() || formData.lastName.length < 2) {
+      newErrors.lastName = "Last name must be at least 2 characters"
+    }
+
+    if (!formData.dateOfBirth) {
+      newErrors.dateOfBirth = "Date of birth is required"
+    }
+
+    if (!formData.class) {
+      newErrors.class = "Please select a class/grade"
+    }
+
+    if (!formData.guardianFirstName.trim() || formData.guardianFirstName.length < 2) {
+      newErrors.guardianFirstName = "Guardian first name must be at least 2 characters"
+    }
+
+    if (!formData.guardianLastName.trim() || formData.guardianLastName.length < 2) {
+      newErrors.guardianLastName = "Guardian last name must be at least 2 characters"
+    }
+
+    if (!formData.guardianContact.trim()) {
+      newErrors.guardianContact = "Contact information is required"
+    } else if (!validateContact(formData.guardianContact)) {
+      newErrors.guardianContact = "Please enter a valid email address or phone number"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const validationErrors = validate();
-    setErrors(validationErrors);
-    if (Object.keys(validationErrors).length === 0) {
-      setSubmitted(true);
-      console.log('Student Data:', form);
-      // Reset form or call parent callback here
+    e.preventDefault()
+
+    if (validateForm()) {
+      console.log("Student Information:", formData)
+      alert("Student information submitted successfully!")
+      // Here you would typically send the data to your backend
     }
-  };
+  }
+
+  const handleReset = () => {
+    setFormData({
+      firstName: "",
+      lastName: "",
+      dateOfBirth: "",
+      class: "",
+      guardianFirstName: "",
+      guardianLastName: "",
+      guardianContact: "",
+    })
+    setErrors({})
+  }
 
   return (
-    <div className="max-w-lg mx-auto mt-12 p-8 bg-white/90 rounded-2xl shadow-xl border border-gray-200">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Add New Student</h2>
-      {submitted ? (
-        <div className="text-green-600 text-center font-semibold">Student added successfully!</div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-              <input
-                type="text"
-                name="firstName"
-                value={form.firstName}
-                onChange={handleChange}
-                className={`w-full px-4 py-2 border ${errors.firstName ? 'border-red-400' : 'border-gray-200'} rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                placeholder="First Name"
-              />
-              {errors.firstName && <div className="text-xs text-red-500 mt-1">{errors.firstName}</div>}
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-2xl mx-auto">
+        <Card>
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <GraduationCap className="h-12 w-12 text-blue-600" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-              <input
-                type="text"
-                name="lastName"
-                value={form.lastName}
-                onChange={handleChange}
-                className={`w-full px-4 py-2 border ${errors.lastName ? 'border-red-400' : 'border-gray-200'} rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                placeholder="Last Name"
-              />
-              {errors.lastName && <div className="text-xs text-red-500 mt-1">{errors.lastName}</div>}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
-            <input
-              type="date"
-              name="dob"
-              value={form.dob}
-              onChange={handleChange}
-              className={`w-full px-4 py-2 border ${errors.dob ? 'border-red-400' : 'border-gray-200'} rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-            />
-            {errors.dob && <div className="text-xs text-red-500 mt-1">{errors.dob}</div>}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mother's Name</label>
-              <input
-                type="text"
-                name="mother"
-                value={form.mother}
-                onChange={handleChange}
-                className={`w-full px-4 py-2 border ${errors.guardian ? 'border-red-400' : 'border-gray-200'} rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                placeholder="Mother's Name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Father's Name</label>
-              <input
-                type="text"
-                name="father"
-                value={form.father}
-                onChange={handleChange}
-                className={`w-full px-4 py-2 border ${errors.guardian ? 'border-red-400' : 'border-gray-200'} rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                placeholder="Father's Name"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Guardian's Name</label>
-            <input
-              type="text"
-              name="guardian"
-              value={form.guardian}
-              onChange={handleChange}
-              className={`w-full px-4 py-2 border ${errors.guardian ? 'border-red-400' : 'border-gray-200'} rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-              placeholder="Guardian's Name"
-            />
-            {errors.guardian && <div className="text-xs text-red-500 mt-1">{errors.guardian}</div>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Parent's/Guardian's Phone Number *</label>
-            <input
-              type="text"
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              className={`w-full px-4 py-2 border ${errors.phone ? 'border-red-400' : 'border-gray-200'} rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-              placeholder="e.g. +2507xxxxxxx"
-            />
-            {errors.phone && <div className="text-xs text-red-500 mt-1">{errors.phone}</div>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
-            <input
-              type="text"
-              name="location"
-              value={form.location}
-              onChange={handleChange}
-              className={`w-full px-4 py-2 border ${errors.location ? 'border-red-400' : 'border-gray-200'} rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-              placeholder="Location"
-            />
-            {errors.location && <div className="text-xs text-red-500 mt-1">{errors.location}</div>}
-          </div>
-          <button
-            type="submit"
-            className="w-full py-3 bg-blue-700 text-white rounded-lg font-semibold shadow hover:bg-blue-800 transition-colors"
-          >
-            Add Student
-          </button>
-        </form>
-      )}
-    </div>
-  );
-};
+            <CardTitle className="text-2xl font-bold">Student Registration</CardTitle>
+            <CardDescription>Enter student information for the performance tracking system</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Student Information Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-lg font-semibold text-gray-700">
+                  <User className="h-5 w-5" />
+                  Student Information
+                </div>
 
-export default AddStudentForm; 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name *</Label>
+                    <Input
+                      id="firstName"
+                      placeholder="Enter first name"
+                      value={formData.firstName}
+                      onChange={(e) => handleInputChange("firstName", e.target.value)}
+                      className={errors.firstName ? "border-red-500" : ""}
+                    />
+                    {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      placeholder="Enter last name"
+                      value={formData.lastName}
+                      onChange={(e) => handleInputChange("lastName", e.target.value)}
+                      className={errors.lastName ? "border-red-500" : ""}
+                    />
+                    {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
+                      className={errors.dateOfBirth ? "border-red-500" : ""}
+                    />
+                    {errors.dateOfBirth && <p className="text-sm text-red-500">{errors.dateOfBirth}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="class">Class/Grade *</Label>
+                    <Select onValueChange={(value) => handleInputChange("class", value)}>
+                      <SelectTrigger className={errors.class ? "border-red-500" : ""}>
+                        <SelectValue placeholder="Select class/grade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="kindergarten">Kindergarten</SelectItem>
+                        <SelectItem value="grade-1">Grade 1</SelectItem>
+                        <SelectItem value="grade-2">Grade 2</SelectItem>
+                        <SelectItem value="grade-3">Grade 3</SelectItem>
+                        <SelectItem value="grade-4">Grade 4</SelectItem>
+                        <SelectItem value="grade-5">Grade 5</SelectItem>
+                        <SelectItem value="grade-6">Grade 6</SelectItem>
+                        <SelectItem value="grade-7">Grade 7</SelectItem>
+                        <SelectItem value="grade-8">Grade 8</SelectItem>
+                        <SelectItem value="grade-9">Grade 9</SelectItem>
+                        <SelectItem value="grade-10">Grade 10</SelectItem>
+                        <SelectItem value="grade-11">Grade 11</SelectItem>
+                        <SelectItem value="grade-12">Grade 12</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.class && <p className="text-sm text-red-500">{errors.class}</p>}
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Parent/Guardian Information Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-lg font-semibold text-gray-700">
+                  <Users className="h-5 w-5" />
+                  Parent/Guardian Information
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="guardianFirstName">Guardian First Name *</Label>
+                    <Input
+                      id="guardianFirstName"
+                      placeholder="Enter guardian first name"
+                      value={formData.guardianFirstName}
+                      onChange={(e) => handleInputChange("guardianFirstName", e.target.value)}
+                      className={errors.guardianFirstName ? "border-red-500" : ""}
+                    />
+                    {errors.guardianFirstName && <p className="text-sm text-red-500">{errors.guardianFirstName}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="guardianLastName">Guardian Last Name *</Label>
+                    <Input
+                      id="guardianLastName"
+                      placeholder="Enter guardian last name"
+                      value={formData.guardianLastName}
+                      onChange={(e) => handleInputChange("guardianLastName", e.target.value)}
+                      className={errors.guardianLastName ? "border-red-500" : ""}
+                    />
+                    {errors.guardianLastName && <p className="text-sm text-red-500">{errors.guardianLastName}</p>}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="guardianContact">Contact Information *</Label>
+                  <Input
+                    id="guardianContact"
+                    placeholder="Enter email address or phone number"
+                    value={formData.guardianContact}
+                    onChange={(e) => handleInputChange("guardianContact", e.target.value)}
+                    className={errors.guardianContact ? "border-red-500" : ""}
+                  />
+                  <p className="text-sm text-gray-500">Please provide either an email address or phone number</p>
+                  {errors.guardianContact && <p className="text-sm text-red-500">{errors.guardianContact}</p>}
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <Button type="submit" className="flex-1">
+                  Register Student
+                </Button>
+                <Button type="button" variant="outline" className="flex-1 bg-transparent" onClick={handleReset}>
+                  Clear Form
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
