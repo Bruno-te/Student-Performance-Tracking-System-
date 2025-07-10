@@ -1,4 +1,4 @@
-# URUGENDO+ Student Management App
+# URUGENDO+ (Student Management App)
 
 This is a basic Flask-based backend for managing student data, user authentication, and role-based access (admin, teacher, parent) using a PostgreSQL database.
 
