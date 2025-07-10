@@ -51,7 +51,7 @@ python main.py
 Visit http://127.0.0.1:5000/signup to create an account.
 
 📦 Dependencies
-ini
+```ini
 Flask==2.3.3
 Flask-SQLAlchemy==3.0.5
 psycopg2-binary==2.9.7
