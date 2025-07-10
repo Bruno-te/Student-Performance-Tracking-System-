@@ -10,19 +10,23 @@ This is a basic Flask-based backend for managing student data, user authenticati
 ```bash
 git clone https://github.com/yourusername/urugendo-app.git
 cd urugendo-app
+```
 
 2. Set up a virtual environment
-bash
+```bash
 Copy
 Edit
 python -m venv venv
-venv\Scripts\activate     # On Windows
+venv\Scripts\activate
+```
 
 3. Install dependencies
-bash
+```bash
 Copy
 Edit
 pip install -r requirements.txt
+```
+
 4. Set up the PostgreSQL database
 Make sure PostgreSQL is installed and running
 
@@ -36,26 +40,21 @@ Run the schema:
 
 Open pgAdmin or use terminal:
 
-bash
-Copy
-Edit
 psql -U postgres -d urugendo -f schema.sql
 
 5. Update DB credentials in main.py
 Replace:
 
-python
-Copy
-Edit
+```python
 postgresql://postgres:your_password@localhost/urugendo
 with your actual DB username and password.
+```
 
 ✅ Running the App
-bash
-Copy
-Edit
+```bash
 python main.py
 Visit http://127.0.0.1:5000/signup to create an account.
+```
 
 📦 Dependencies
 ini
