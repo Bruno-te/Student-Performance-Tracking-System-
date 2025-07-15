@@ -35,8 +35,8 @@ class Assessment(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
-    class behavior(db.Model):
-         __tablename__ ='behavior'
+class behavior(db.Model):
+    __tablename__ ='behavior'
     behavior_id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.student_id'), nullable=False)
     behavior_type = db.Column(db.String(10), nullable=False)  # 'positive' or 'negative'
@@ -46,3 +46,12 @@ class Assessment(db.Model):
     teacher_id = db.Column(db.String(20))                     # Optional teacher/staff identifier
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+class Participation(db.Model):
+    __tablename__ = 'participation'
+    participation_id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.student_id'), nullable=False)
+    event_name = db.Column(db.String(100), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), nullable=False)
+    remarks = db.Column(db.String(255))    
