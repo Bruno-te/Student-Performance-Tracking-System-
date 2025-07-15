@@ -34,3 +34,15 @@ class Assessment(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+    class behavior(db.Model):
+         __tablename__ ='behavior'
+    behavior_id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.student_id'), nullable=False)
+    behavior_type = db.Column(db.String(10), nullable=False)  # 'positive' or 'negative'
+    category = db.Column(db.String(50), nullable=False)       # e.g., 'participation', 'lateness', etc.
+    notes = db.Column(db.Text)
+    date = db.Column(db.Date, nullable=False, default=db.func.current_date())
+    teacher_id = db.Column(db.String(20))                     # Optional teacher/staff identifier
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
