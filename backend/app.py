@@ -3,7 +3,8 @@ from config import Config
 from models import db
 from routes.students import students_bp
 from routes.attendance import attendance_bp
-from routes.assessments import assessments_bp  #
+from routes.assessments import assessments_bp
+from routes.participation import participation_bp #
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -13,6 +14,7 @@ db.init_app(app)
 app.register_blueprint(students_bp, url_prefix='/students')
 app.register_blueprint(attendance_bp, url_prefix='/attendance')
 app.register_blueprint(assessments_bp, url_prefix='/api/assessments')
+app.register_blueprint(participation_bp, url_prefix='/api/participation')
 
 
 # Simple home route to avoid 404 on "/"

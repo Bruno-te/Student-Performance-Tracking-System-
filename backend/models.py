@@ -34,3 +34,12 @@ class Assessment(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+class Participation(db.Model):
+    __tablename__ = 'participation'
+    participation_id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.student_id'), nullable=False)
+    event_name = db.Column(db.String(100), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), nullable=False)
+    remarks = db.Column(db.String(255))    
