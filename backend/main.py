@@ -7,6 +7,10 @@ from datetime import timedelta
 from flask_cors import CORS
 from models import db
 from routes.students import students_bp
+from routes.assessments import assessments_bp
+from routes.attendance import attendance_bp
+from routes.participation import participation_bp
+from routes.behavioral import behavioral_bp
 
 app = Flask(__name__)
 CORS(
@@ -135,9 +139,13 @@ def logout():
 # -------------------- MAIN --------------------
 @app.route('/test')
 def test():
-    return "Hello, world!"
+    return "Test!"
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.register_blueprint(students_bp, url_prefix='/api/students/')
+    app.register_blueprint(assessments_bp, url_prefix='/assessments')
+    app.register_blueprint(attendance_bp, url_prefix='/attendance')
+    app.register_blueprint(participation_bp, url_prefix='/participation')
+    app.register_blueprint(behavioral_bp, url_prefix='/behavioral')
     app.run(debug=True, host='127.0.0.1', port=5051)

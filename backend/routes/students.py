@@ -85,6 +85,16 @@ def delete_student(student_id):
     db.session.commit()
     return jsonify({'message': 'Student deleted'})
 
+@students_bp.route('/classes', methods=['GET'])
+def get_classes():
+    classes = Class.query.all()
+    return jsonify([
+        {
+            'class_id': c.class_id,
+            'class_name': c.class_name
+        } for c in classes
+    ])
+
 #  Local test when running this file directly
 if __name__ == '__main__':
     app = Flask(__name__)
@@ -94,9 +104,18 @@ if __name__ == '__main__':
 
     with app.app_context():
         db.create_all()
+        # Pre-populate classes
+        class_names = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6']
+        for idx, name in enumerate(class_names, start=1):
+            if not Class.query.filter_by(class_id=idx).first():
+                db.session.add(Class(class_id=idx, class_name=name))
+        db.session.commit()
+        print('Classes pre-populated.')
+
         print("Inserting test student...")
 
         test_student = Student(
+            student_id=str(uuid.uuid4()),
             full_name="Taylor West",
             gender="F",
             date_of_birth=datetime.date(2006, 8, 15),

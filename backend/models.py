@@ -112,3 +112,13 @@ class Behavioral(db.Model):
     action_taken = db.Column(db.String(100))
     reported_by = db.Column(db.String(100))
     timestamp = db.Column(db.DateTime)
+
+class TeacherClassSubject(db.Model):
+    __tablename__ = 'teacher_class_subject'
+    id = db.Column(db.Integer, primary_key=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.teacher_id', ondelete='CASCADE'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('classes.class_id', ondelete='CASCADE'), nullable=False)
+    subject = db.Column(db.String(100), nullable=False)
+    # Relationships
+    teacher = db.relationship('Teacher', backref='class_subject_assignments')
+    class_ = db.relationship('Class', backref='teacher_subject_assignments')
