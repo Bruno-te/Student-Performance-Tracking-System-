@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, AlertTriangle, Award, Clock, Filter } from 'lucide-react';
-import { mockStudents, mockBehavioral } from '../data/mockData';
-import { BehavioralRecord } from '../types';
+import { Student, BehavioralRecord } from '../types';
 
 const BehavioralTracker: React.FC = () => {
-  const [behavioralRecords, setBehavioralRecords] = useState<BehavioralRecord[]>(mockBehavioral);
+  // All hooks at the top
+  const [behavioralRecords, setBehavioralRecords] = useState<BehavioralRecord[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'positive' | 'negative'>('all');
   const [selectedDate, setSelectedDate] = useState('');
-
   const categories = ['discipline', 'leadership', 'cooperation', 'respect', 'punctuality', 'other'];
   const severityLevels = ['low', 'medium', 'high'];
-
   const [newRecord, setNewRecord] = useState({
     studentId: '',
     type: 'positive' as const,
@@ -20,6 +21,26 @@ const BehavioralTracker: React.FC = () => {
     severity: 'low' as const,
     actionTaken: ''
   });
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      fetch('http://localhost:5051/api/students/').then(res => res.json()),
+      fetch('http://localhost:5051/behavioral').then(res => res.json()),
+    ])
+      .then(([studentsData, behavioralData]) => {
+        setStudents(studentsData);
+        setBehavioralRecords(behavioralData);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to load data from backend.');
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <div>Loading behavioral records...</div>;
+  if (error) return <div className="text-red-500">{error}</div>;
 
   const handleAddRecord = () => {
     if (newRecord.studentId && newRecord.description) {
@@ -146,7 +167,7 @@ const BehavioralTracker: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 sm:gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -189,12 +210,12 @@ const BehavioralTracker: React.FC = () => {
 
       {/* Student Behavior Overview */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
+        <div className="p-4 border-b border-gray-100 sm:p-6">
           <h3 className="text-lg font-semibold text-gray-900">Student Behavior Overview</h3>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockStudents.map(student => {
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 sm:gap-4">
+            {students.map(student => {
               const stats = getStudentBehaviorStats(student.id);
               return (
                 <div key={student.id} className="bg-gray-50 rounded-lg p-4">
@@ -246,7 +267,7 @@ const BehavioralTracker: React.FC = () => {
               </div>
             ) : (
               filteredRecords.map(record => {
-                const student = mockStudents.find(s => s.id === record.studentId);
+                const student = students.find(s => s.id === record.studentId);
                 return (
                   <div key={record.id} className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-start justify-between">
@@ -311,7 +332,7 @@ const BehavioralTracker: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">Select Student</option>
-                  {mockStudents.map(student => (
+                  {students.map(student => (
                     <option key={student.id} value={student.id}>{student.name}</option>
                   ))}
                 </select>

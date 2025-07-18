@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, MessageSquare, Star, Users, TrendingUp } from 'lucide-react';
-import { mockStudents, mockParticipation } from '../data/mockData';
-import { ParticipationLog } from '../types';
+import { ParticipationLog, Student } from '../types';
 
 const ParticipationLogger: React.FC = () => {
-  const [participationLogs, setParticipationLogs] = useState<ParticipationLog[]>(mockParticipation);
+  // All hooks at the top
+  const [participationLogs, setParticipationLogs] = useState<ParticipationLog[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-
   const subjects = ['Mathematics', 'English', 'Science', 'Social Studies', 'Kinyarwanda', 'French'];
   const activityTypes = ['answer', 'question', 'discussion', 'presentation', 'group_work'];
-
   const [newLog, setNewLog] = useState({
     studentId: '',
     subject: '',
@@ -18,6 +19,26 @@ const ParticipationLogger: React.FC = () => {
     description: '',
     rating: 3 as const
   });
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      fetch('http://localhost:5051/api/students/').then(res => res.json()),
+      fetch('http://localhost:5051/participation').then(res => res.json()),
+    ])
+      .then(([studentsData, participationData]) => {
+        setStudents(studentsData);
+        setParticipationLogs(participationData);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to load data from backend.');
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <div>Loading participation logs...</div>;
+  if (error) return <div className="text-red-500">{error}</div>;
 
   const handleAddLog = () => {
     if (newLog.studentId && newLog.subject && newLog.description) {
@@ -102,7 +123,7 @@ const ParticipationLogger: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 sm:gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -151,12 +172,12 @@ const ParticipationLogger: React.FC = () => {
 
       {/* Student Participation Overview */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
+        <div className="p-4 border-b border-gray-100 sm:p-6">
           <h3 className="text-lg font-semibold text-gray-900">Student Participation Overview</h3>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockStudents.map(student => {
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 sm:gap-4">
+            {students.map(student => {
               const stats = getStudentParticipationStats(student.id);
               return (
                 <div key={student.id} className="bg-gray-50 rounded-lg p-4">
@@ -216,7 +237,7 @@ const ParticipationLogger: React.FC = () => {
               </div>
             ) : (
               todayLogs.map(log => {
-                const student = mockStudents.find(s => s.id === log.studentId);
+                const student = students.find(s => s.id === log.studentId);
                 return (
                   <div key={log.id} className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-start justify-between">
@@ -279,7 +300,7 @@ const ParticipationLogger: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">Select Student</option>
-                  {mockStudents.map(student => (
+                  {students.map(student => (
                     <option key={student.id} value={student.id}>{student.name}</option>
                   ))}
                 </select>

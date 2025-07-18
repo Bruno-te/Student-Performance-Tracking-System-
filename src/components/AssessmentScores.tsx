@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, FileText, TrendingUp, Award, BookOpen } from 'lucide-react';
-import { mockStudents, mockAssessments } from '../data/mockData';
-import { AssessmentScore } from '../types';
+import { AssessmentScore, Student } from '../types';
 
 const AssessmentScores: React.FC = () => {
-  const [assessments, setAssessments] = useState<AssessmentScore[]>(mockAssessments);
+  // All hooks at the top
+  const [assessments, setAssessments] = useState<AssessmentScore[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
-
   const subjects = ['Mathematics', 'English', 'Science', 'Social Studies', 'Kinyarwanda', 'French'];
   const assessmentTypes = ['test', 'quiz', 'exam', 'assignment', 'project'];
-
   const [newAssessment, setNewAssessment] = useState({
     studentId: '',
     subject: '',
@@ -22,6 +23,26 @@ const AssessmentScores: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     term: 'Term 1'
   });
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      fetch('http://localhost:5051/api/students/').then(res => res.json()),
+      fetch('http://localhost:5051/assessments').then(res => res.json()),
+    ])
+      .then(([studentsData, assessmentsData]) => {
+        setStudents(studentsData);
+        setAssessments(assessmentsData);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to load data from backend.');
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <div>Loading assessment scores...</div>;
+  if (error) return <div className="text-red-500">{error}</div>;
 
   const handleAddAssessment = () => {
     if (newAssessment.studentId && newAssessment.subject && newAssessment.assessmentName && newAssessment.score) {
@@ -103,7 +124,7 @@ const AssessmentScores: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Students</option>
-              {mockStudents.map(student => (
+              {students.map(student => (
                 <option key={student.id} value={student.id}>{student.name}</option>
               ))}
             </select>
@@ -136,7 +157,7 @@ const AssessmentScores: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 sm:gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -202,7 +223,7 @@ const AssessmentScores: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredAssessments.map((assessment) => {
-                const student = mockStudents.find(s => s.id === assessment.studentId);
+                const student = students.find(s => s.id === assessment.studentId);
                 const percentage = Math.round((assessment.score / assessment.maxScore) * 100);
                 return (
                   <tr key={assessment.id} className="hover:bg-gray-50">
@@ -277,7 +298,7 @@ const AssessmentScores: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">Select Student</option>
-                  {mockStudents.map(student => (
+                  {students.map(student => (
                     <option key={student.id} value={student.id}>{student.name}</option>
                   ))}
                 </select>

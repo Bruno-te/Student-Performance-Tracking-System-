@@ -1,18 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Users, Check, X, Clock, FileText, Download } from 'lucide-react';
-import { mockStudents, mockAttendance } from '../data/mockData';
-import { AttendanceRecord } from '../types';
+import { Student, AttendanceRecord } from '../types';
 
 const AttendanceTracker: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(mockAttendance);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      fetch('http://localhost:5051/api/students/').then(res => res.json()),
+      fetch('http://localhost:5051/attendance').then(res => res.json()),
+    ])
+      .then(([studentsData, attendanceData]) => {
+        setStudents(studentsData);
+        setAttendanceRecords(attendanceData);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to load data from backend.');
+        setLoading(false);
+      });
+  }, []);
 
   const updateAttendance = (studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
     setAttendanceRecords(prev => {
       const existing = prev.find(r => r.studentId === studentId && r.date === selectedDate);
       if (existing) {
-        return prev.map(r => 
-          r.id === existing.id 
+        return prev.map(r =>
+          r.id === existing.id
             ? { ...r, status, timestamp: new Date().toISOString() }
             : r
         );
@@ -39,9 +58,11 @@ const AttendanceTracker: React.FC = () => {
     const late = todayRecords.filter(r => r.status === 'late').length;
     const absent = todayRecords.filter(r => r.status === 'absent').length;
     const excused = todayRecords.filter(r => r.status === 'excused').length;
-    
-    return { present, late, absent, excused, total: mockStudents.length };
+    return { present, late, absent, excused, total: students.length };
   };
+
+  if (loading) return <div>Loading attendance data...</div>;
+  if (error) return <div className="text-red-500">{error}</div>;
 
   const stats = getAttendanceStats();
 
@@ -77,11 +98,11 @@ const AttendanceTracker: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Attendance Tracker</h1>
-          <p className="text-gray-600">Mark and manage student attendance</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">Attendance Tracker</h1>
+          <p className="text-base sm:text-lg font-light text-gray-600">Mark and manage student attendance</p>
         </div>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
@@ -90,10 +111,10 @@ const AttendanceTracker: React.FC = () => {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
             />
           </div>
-          <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base font-semibold">
             <Download className="w-4 h-4" />
             <span>Export</span>
           </button>
@@ -101,11 +122,11 @@ const AttendanceTracker: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-5 sm:gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total</p>
+              <p className="text-sm font-light text-gray-600">Total</p>
               <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
             </div>
             <Users className="w-8 h-8 text-gray-400" />
@@ -114,7 +135,7 @@ const AttendanceTracker: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-green-600">Present</p>
+              <p className="text-sm font-light text-green-600">Present</p>
               <p className="text-2xl font-bold text-green-700">{stats.present}</p>
             </div>
             <Check className="w-8 h-8 text-green-400" />
@@ -123,7 +144,7 @@ const AttendanceTracker: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-red-600">Absent</p>
+              <p className="text-sm font-light text-red-600">Absent</p>
               <p className="text-2xl font-bold text-red-700">{stats.absent}</p>
             </div>
             <X className="w-8 h-8 text-red-400" />
@@ -132,7 +153,7 @@ const AttendanceTracker: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-yellow-600">Late</p>
+              <p className="text-sm font-light text-yellow-600">Late</p>
               <p className="text-2xl font-bold text-yellow-700">{stats.late}</p>
             </div>
             <Clock className="w-8 h-8 text-yellow-400" />
@@ -141,7 +162,7 @@ const AttendanceTracker: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-blue-600">Excused</p>
+              <p className="text-sm font-light text-blue-600">Excused</p>
               <p className="text-2xl font-bold text-blue-700">{stats.excused}</p>
             </div>
             <FileText className="w-8 h-8 text-blue-400" />
@@ -164,7 +185,7 @@ const AttendanceTracker: React.FC = () => {
         </div>
         <div className="p-6">
           <div className="space-y-4">
-            {mockStudents.map((student) => {
+            {students.map((student) => {
               const attendance = getStudentAttendance(student.id);
               return (
                 <div key={student.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
