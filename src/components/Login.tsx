@@ -6,10 +6,10 @@ interface LoginFormProps {
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [emailError, setEmailError] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,15 +19,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     return emailRegex.test(email);
   };
 
-  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setEmailError('');
+    setUsernameError('');
     setPasswordError('');
     setFormError('');
     let isValid = true;
 
-    if (!email || !validateEmail(email)) {
-      setEmailError('Please enter a valid email address');
+    if (!username) {
+      setUsernameError('Please enter your username');
       isValid = false;
     }
     if (!password || password.length < 8) {
@@ -37,15 +37,23 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     if (!isValid) return;
 
     setIsSubmitting(true);
-    // Dummy credentials for demo
-    setTimeout(() => {
+    try {
+      const response = await fetch('http://localhost:5051/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await response.json();
       setIsSubmitting(false);
-      if (email === 'admin@example.com' && password === 'password123') {
+      if (response.ok) {
         if (onLogin) onLogin();
       } else {
-        setFormError('Invalid email or password');
+        setFormError(data.message || 'Login failed');
       }
-    }, 900);
+    } catch (err) {
+      setIsSubmitting(false);
+      setFormError('Network error. Please try again.');
+    }
   };
 
   return (
@@ -54,7 +62,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       <img
         src={educationImg}
         alt="Education background"
-        className="absolute inset-0 w-full h-full object-cover object-center z-0 blur-md scale-105"
+        className="absolute inset-0 w-full h-full object-cover object-center z-0 blur-sm scale-105"
         aria-hidden="true"
       />
       {/* Overlay for darkening effect */}
@@ -67,19 +75,19 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
         </div>
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Email</label>
+            <label className="block text-sm font-medium text-slate-200 mb-1">Username</label>
             <div className="relative">
               <input
-                type="email"
-                className={`w-full px-4 py-3 border ${emailError ? 'border-red-400' : 'border-slate-700'} rounded-lg bg-slate-900/80 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                autoComplete="email"
-                placeholder="you@example.com"
+                type="text"
+                className={`w-full px-4 py-3 border ${usernameError ? 'border-red-400' : 'border-slate-700'} rounded-lg bg-slate-900/80 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition`}
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                autoComplete="username"
+                placeholder="username"
               />
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></span>
             </div>
-            {emailError && <div className="text-xs text-red-400 mt-1">{emailError}</div>}
+            {usernameError && <div className="text-xs text-red-400 mt-1">{usernameError}</div>}
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-200 mb-1">Password</label>
