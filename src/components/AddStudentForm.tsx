@@ -27,7 +27,12 @@ const steps = [
   "Emergency Contacts"
 ]
 
-export default function AddStudentForm() {
+// Add prop to AddStudentForm
+interface AddStudentFormProps {
+  onCancel?: () => void;
+}
+
+export default function AddStudentForm({ onCancel }: AddStudentFormProps) {
   const [formData, setFormData] = useState<StudentFormData>({
     firstName: "",
     lastName: "",
@@ -44,23 +49,26 @@ export default function AddStudentForm() {
   const [success, setSuccess] = useState("")
   const [errorBanner, setErrorBanner] = useState("")
   const firstFieldRef = useRef<HTMLInputElement>(null)
-  const [classList, setClassList] = useState<{ class_id: number; class_name: string }[]>([]);
-  const [classLoading, setClassLoading] = useState(true);
-  const [classError, setClassError] = useState("");
+  // Replace with static class options 1-6
+  const staticClasses = [
+    { class_id: 1, class_name: '1' },
+    { class_id: 2, class_name: '2' },
+    { class_id: 3, class_name: '3' },
+    { class_id: 4, class_name: '4' },
+    { class_id: 5, class_name: '5' },
+    { class_id: 6, class_name: '6' },
+  ];
 
-  useEffect(() => {
-    setClassLoading(true);
-    fetch("http://localhost:5051/students/classes/")
-      .then(res => res.json())
-      .then(data => {
-        setClassList(data);
-        setClassLoading(false);
-      })
-      .catch(() => {
-        setClassError("Failed to load class list");
-        setClassLoading(false);
-      });
-  }, []);
+  // Relationship options for dropdown
+  const relationshipOptions = [
+    "Father",
+    "Mother",
+    "Guardian",
+    "Grandparent",
+    "Sibling",
+    "Aunt/Uncle",
+    "Other"
+  ];
 
   React.useEffect(() => {
     if (firstFieldRef.current) firstFieldRef.current.focus()
@@ -71,24 +79,13 @@ export default function AddStudentForm() {
     return /^\+250[0-9]{9}$/.test(cleanPhone)
   }
 
+  // Update getSubclassOptions to always return A, B, C for classes 1-6
   const getSubclassOptions = (mainClass: string) => {
-    const subclassMap: { [key: string]: string[] } = {
-      "kindergarten": ["A", "B", "C"],
-      "grade-1": ["A", "B", "C"],
-      "grade-2": ["A", "B", "C"],
-      "grade-3": ["A", "B", "C"],
-      "grade-4": ["A", "B", "C"],
-      "grade-5": ["A", "B", "C"],
-      "grade-6": ["A", "B", "C"],
-      "grade-7": ["A", "B", "C"],
-      "grade-8": ["A", "B", "C"],
-      "grade-9": ["A", "B", "C"],
-      "grade-10": ["A", "B", "C"],
-      "grade-11": ["A", "B", "C"],
-      "grade-12": ["A", "B", "C"],
+    if (["1", "2", "3", "4", "5", "6"].includes(mainClass)) {
+      return ["A", "B", "C"];
     }
-    return subclassMap[mainClass] || []
-  }
+    return [];
+  };
 
   // --- Validation per step ---
   const validateStep = (): boolean => {
@@ -209,31 +206,51 @@ export default function AddStudentForm() {
     setStep((prev) => prev - 1)
     setErrorBanner("")
   }
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateStep()) {
-      setLoading(true)
-      setSuccess("")
-      setErrorBanner("")
-      setTimeout(() => {
-        setLoading(false)
-        setSuccess("Student information submitted successfully!")
-        setStep(0)
-        setFormData({
-          firstName: "",
-          lastName: "",
-          dateOfBirth: "",
-          gender: "",
-          class: "",
-          subclass: "",
-          guardians: [{ firstName: "", lastName: "", relationship: "", contact: "" }],
-          emergencyContacts: [{ firstName: "", lastName: "", relationship: "", contact: "" }],
-        })
-        setErrors({})
-      }, 1200)
+      setLoading(true);
+      setSuccess("");
+      setErrorBanner("");
+      try {
+        // Prepare payload with class_id as a number
+        const payload = {
+          ...formData,
+          class_id: Number(formData.class),
+          full_name: formData.firstName + ' ' + formData.lastName,
+        };
+        delete payload.class;
+        const response = await fetch("http://localhost:5051/api/students/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          setSuccess("Student information submitted successfully!");
+          setStep(0);
+          setFormData({
+            firstName: "",
+            lastName: "",
+            dateOfBirth: "",
+            gender: "",
+            class: "",
+            subclass: "",
+            guardians: [{ firstName: "", lastName: "", relationship: "", contact: "" }],
+            emergencyContacts: [{ firstName: "", lastName: "", relationship: "", contact: "" }],
+          });
+          setErrors({});
+        } else {
+          const data = await response.json();
+          setErrorBanner(data.message || "Failed to submit student information.");
+        }
+      } catch (err) {
+        setErrorBanner("Network error. Please try again.");
+      } finally {
+        setLoading(false);
+      }
     } else {
-      setErrorBanner("Please fix the errors below before submitting.")
+      setErrorBanner("Please fix the errors below before submitting.");
     }
-  }
+  };
   const handleReset = () => {
     if (window.confirm("Are you sure you want to clear the form?")) {
     setFormData({
@@ -312,18 +329,12 @@ export default function AddStudentForm() {
               <div className="flex gap-4">
                 <div className="flex-1">
                   <label className="block font-medium mb-1">Class/Grade</label>
-                  {classLoading ? (
-                    <div className="text-gray-500 text-sm">Loading classes...</div>
-                  ) : classError ? (
-                    <div className="text-red-500 text-sm">{classError}</div>
-                  ) : (
-                    <select className={`w-full px-4 py-2 rounded-lg border ${errors.class ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500`} value={formData.class} onChange={e => handleClassChange(e.target.value)} aria-label="Class">
-                      <option value="">Select Class</option>
-                      {classList.map(cls => (
-                        <option key={cls.class_id} value={cls.class_id}>{cls.class_name}</option>
-                      ))}
+                  <select className={`w-full px-4 py-2 rounded-lg border ${errors.class ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500`} value={formData.class} onChange={e => handleClassChange(e.target.value)} aria-label="Class">
+                    <option value="">Select Class</option>
+                    {staticClasses.map(cls => (
+                      <option key={cls.class_id} value={cls.class_id}>{cls.class_name}</option>
+                    ))}
                   </select>
-                  )}
                   {errors.class && <div className="text-red-500 text-sm mt-1">{errors.class}</div>}
                 </div>
                 <div className="flex-1">
@@ -361,7 +372,12 @@ export default function AddStudentForm() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                     <div>
                       <label className="block font-medium mb-1">Relationship</label>
-                      <input type="text" className={`w-full px-4 py-2 rounded-lg border ${errors.guardians?.[i]?.relationship ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500`} value={g.relationship} onChange={e => handleGuardianChange(i, 'relationship', e.target.value)} aria-label="Guardian Relationship" />
+                      <select className={`w-full px-4 py-2 rounded-lg border ${errors.guardians?.[i]?.relationship ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500`} value={g.relationship} onChange={e => handleGuardianChange(i, 'relationship', e.target.value)} aria-label="Guardian Relationship">
+                        <option value="">Select Relationship</option>
+                        {relationshipOptions.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
                       {errors.guardians?.[i]?.relationship && <div className="text-red-500 text-sm mt-1">{errors.guardians[i].relationship}</div>}
                     </div>
                     <div>
@@ -381,7 +397,7 @@ export default function AddStudentForm() {
               {formData.emergencyContacts.map((c, i) => (
                 <div key={i} className="bg-gray-50 rounded-lg p-4 mb-2 border border-gray-200 relative">
                   <div className="font-semibold mb-2 flex items-center gap-2">Contact {i+1} <Phone className="w-4 h-4 text-blue-400" /></div>
-                    {formData.emergencyContacts.length > 1 && (
+                  {formData.emergencyContacts.length > 1 && (
                     <button type="button" className="absolute top-2 right-2 text-red-500 hover:text-red-700" onClick={() => removeEmergencyContact(i)} aria-label="Remove Contact"><Minus /></button>
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -399,7 +415,12 @@ export default function AddStudentForm() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                     <div>
                       <label className="block font-medium mb-1">Relationship</label>
-                      <input type="text" className={`w-full px-4 py-2 rounded-lg border ${errors.emergencyContacts?.[i]?.relationship ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500`} value={c.relationship} onChange={e => handleEmergencyContactChange(i, 'relationship', e.target.value)} aria-label="Contact Relationship" />
+                      <select className={`w-full px-4 py-2 rounded-lg border ${errors.emergencyContacts?.[i]?.relationship ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500`} value={c.relationship} onChange={e => handleEmergencyContactChange(i, 'relationship', e.target.value)} aria-label="Contact Relationship">
+                        <option value="">Select Relationship</option>
+                        {relationshipOptions.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
                       {errors.emergencyContacts?.[i]?.relationship && <div className="text-red-500 text-sm mt-1">{errors.emergencyContacts[i].relationship}</div>}
                     </div>
                     <div>
@@ -409,7 +430,7 @@ export default function AddStudentForm() {
                     </div>
                   </div>
                   {formData.guardians[i] && (
-                    <button type="button" className="mt-2 px-3 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100" onClick={() => copyGuardianToEmergency(i)} aria-label="Copy Guardian Info">Copy from Guardian {i+1}</button>
+                    <button type="button" className="mt-2 px-3 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100" onClick={() => copyGuardianToEmergency(i)} aria-label={`Copy Guardian Info`}>Copy from Guardian {i+1}</button>
                   )}
                 </div>
               ))}
@@ -428,11 +449,11 @@ export default function AddStudentForm() {
             )}
             <div className="flex gap-2 ml-0 sm:gap-4 sm:ml-4">
               <button type="button" className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200" onClick={handleReset}>Reset</button>
-              <button type="button" className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200" onClick={() => window.location.href = '/dashboard'}>Cancel</button>
+              <button type="button" className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200" onClick={onCancel}>Cancel</button>
             </div>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
