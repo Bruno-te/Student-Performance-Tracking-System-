@@ -55,3 +55,14 @@ class Participation(db.Model):
     date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), nullable=False)
     remarks = db.Column(db.String(255))    
+
+class Parent(db.Model):
+    __tablename__ = 'parents'
+    parent_id = db.Column(db.Integer, primary_key=True)
+    full_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(128), nullable=False)  # Hash it
+    student_id = db.Column(db.Integer, db.ForeignKey('students.student_id'), nullable=False)
+
+    student = db.relationship('Student', backref='parent', uselist=False)
+
