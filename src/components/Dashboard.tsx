@@ -14,6 +14,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     setLoading(true);
+
     Promise.all([
       fetch('http://localhost:5051/api/students/').then(res => res.json()),
       fetch('http://localhost:5051/attendance').then(res => res.json()),
