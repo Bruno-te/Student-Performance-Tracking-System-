@@ -40,18 +40,6 @@ export default {
           dark: '#0369a1',    // sky-800
         },
       },
-      fontFamily: {
-        sans: [
-          'Inter',
-          'ui-sans-serif',
-          'system-ui',
-          'Segoe UI',
-          'Roboto',
-          'Helvetica Neue',
-          'Arial',
-          'sans-serif',
-        ],
-      },
     },
   },
   plugins: [],
