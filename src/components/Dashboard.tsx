@@ -8,7 +8,7 @@ const Dashboard = () => {
   const [attendance, setAttendance] = useState<any[]>([]);
   const [assessments, setAssessments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('')
+  const [error, setError] = useState('');
   const [studentModal, setStudentModal] = useState<{ open: boolean; student: any | null }>({ open: false, student: null });
   const [activityModal, setActivityModal] = useState<{ open: boolean; activity: any | null }>({ open: false, activity: null });
 
