@@ -1,7 +1,9 @@
 from flask import Blueprint, request, jsonify
-from models import db, TeacherClassSubject, Teacher, Class
+from models import db, TeacherClassSubject, Teacher, Class, User
+import bcrypt
 
 teacher_assignments_bp = Blueprint('teacher_assignments', __name__)
+auth_bp = Blueprint('auth', __name__)
 
 # Placeholder for admin authentication/authorization
 def admin_required(f):
@@ -49,4 +51,21 @@ def delete_assignment(assignment_id):
         return jsonify({'message': 'Assignment not found'}), 404
     db.session.delete(assignment)
     db.session.commit()
-    return jsonify({'message': 'Assignment deleted'}) 
+    return jsonify({'message': 'Assignment deleted'})
+
+@auth_bp.route('/login', methods=['POST', 'OPTIONS'])
+def login():
+    if request.method == 'OPTIONS':
+        return '', 200
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    if not username or not password:
+        return jsonify({'message': 'Username and password are required'}), 400
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({'message': 'Invalid username or password'}), 401
+    if not bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
+        return jsonify({'message': 'Invalid username or password'}), 401
+    # You can add token generation here if needed
+    return jsonify({'message': 'Login successful', 'user_id': user.user_id, 'role': user.role}), 200 
