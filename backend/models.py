@@ -39,6 +39,8 @@ class Student(db.Model):
     assessments = db.relationship('Assessment', backref='student')
     participation = db.relationship('Participation', backref='student')
     behaviorals = db.relationship('Behavioral', backref='student')
+    guardians = db.relationship('Guardian', backref='student', cascade='all, delete-orphan')
+    emergency_contacts = db.relationship('EmergencyContact', backref='student', cascade='all, delete-orphan')
 
 class StudentParentLink(db.Model):
     __tablename__ = 'student_parent_link'
@@ -122,3 +124,21 @@ class TeacherClassSubject(db.Model):
     # Relationships
     teacher = db.relationship('Teacher', backref='class_subject_assignments')
     class_ = db.relationship('Class', backref='teacher_subject_assignments')
+
+class Guardian(db.Model):
+    __tablename__ = 'guardians'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.String, db.ForeignKey('students.student_id', ondelete='CASCADE'))
+    first_name = db.Column(db.String(100))
+    last_name = db.Column(db.String(100))
+    relationship = db.Column(db.String(50))
+    contact = db.Column(db.String(15))
+
+class EmergencyContact(db.Model):
+    __tablename__ = 'emergency_contacts'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.String, db.ForeignKey('students.student_id', ondelete='CASCADE'))
+    first_name = db.Column(db.String(100))
+    last_name = db.Column(db.String(100))
+    relationship = db.Column(db.String(50))
+    contact = db.Column(db.String(15))
