@@ -1,16 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, FileText, TrendingUp, Award, BookOpen } from 'lucide-react';
 import { AssessmentScore, Student } from '../types';
+import ClassGridSelector from './ClassGridSelector';
+
+// Extend Student type to include gender for this component
+interface StudentWithGender extends Student {
+  gender?: string;
+}
 
 const AssessmentScores: React.FC = () => {
   // All hooks at the top
   const [assessments, setAssessments] = useState<AssessmentScore[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentWithGender[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [studentSearch, setStudentSearch] = useState("");
+  const [genderFilter, setGenderFilter] = useState("");
   const subjects = ['Mathematics', 'English', 'Science', 'Social Studies', 'Kinyarwanda', 'French'];
   const assessmentTypes = ['test', 'quiz', 'exam', 'assignment', 'project'];
   const [newAssessment, setNewAssessment] = useState({
@@ -23,6 +31,21 @@ const AssessmentScores: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     term: 'Term 1'
   });
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+
+  // Type for assessment from backend
+  type BackendAssessment = {
+    student_id: string;
+    subject: string;
+    assessment_type: string;
+    assessment_name: string;
+    score: number;
+    max_score: number;
+    date: string;
+    term?: string;
+    teacher_id?: string;
+    [key: string]: any;
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -30,9 +53,22 @@ const AssessmentScores: React.FC = () => {
       fetch('http://localhost:5051/api/students/').then(res => res.json()),
       fetch('http://localhost:5051/assessments').then(res => res.json()),
     ])
-      .then(([studentsData, assessmentsData]) => {
-        setStudents(studentsData);
-        setAssessments(assessmentsData);
+      .then(([studentsData, assessmentsData]: [any[], BackendAssessment[]]) => {
+        setStudents(studentsData.map((s: any) => ({
+          ...s,
+          class: String(s.class_id ?? ''), // ensure it's a string
+          gender: s.gender ?? '',
+        })));
+        setAssessments(assessmentsData.map((a: BackendAssessment) => ({
+          ...a,
+          id: a.id || `${a.student_id}_${a.subject}_${a.date}_${a.assessment_name}`,
+          studentId: a.student_id,
+          assessmentType: a.assessment_type as 'test' | 'quiz' | 'exam' | 'assignment' | 'project',
+          assessmentName: a.assessment_name,
+          maxScore: a.max_score,
+          teacherId: a.teacher_id ?? '',
+          term: a.term ?? '',
+        })));
         setLoading(false);
       })
       .catch(() => {
@@ -41,40 +77,64 @@ const AssessmentScores: React.FC = () => {
       });
   }, []);
 
+  // Only show students in the selected class and matching search and gender
+  const filteredStudents = students.filter((student: StudentWithGender) =>
+    (selectedClassId == null || String(student.class) === String(selectedClassId)) &&
+    student.name.toLowerCase().includes(studentSearch.toLowerCase()) &&
+    (genderFilter === '' || (student.gender && student.gender.toLowerCase() === genderFilter))
+  );
+
+  // Only show assessments for students in the selected class
+  const classAssessments = assessments.filter(a => filteredStudents.some(s => s.id === a.studentId));
+
   if (loading) return <div>Loading assessment scores...</div>;
   if (error) return <div className="text-red-500">{error}</div>;
 
-  const handleAddAssessment = () => {
+  if (!selectedClassId) {
+    return <ClassGridSelector onSelect={setSelectedClassId} />;
+  }
+
+  const handleAddAssessment = async () => {
     if (newAssessment.studentId && newAssessment.subject && newAssessment.assessmentName && newAssessment.score) {
-      const assessment: AssessmentScore = {
-        id: Date.now().toString(),
-        studentId: newAssessment.studentId,
+      const assessment = {
+        student_id: newAssessment.studentId,
         subject: newAssessment.subject,
-        assessmentType: newAssessment.assessmentType,
-        assessmentName: newAssessment.assessmentName,
-        score: parseInt(newAssessment.score),
-        maxScore: parseInt(newAssessment.maxScore),
+        assessment_type: newAssessment.assessmentType,
+        assessment_name: newAssessment.assessmentName,
+        score: newAssessment.score,
+        max_score: newAssessment.maxScore,
         date: newAssessment.date,
         term: newAssessment.term,
-        teacherId: 'current-teacher'
+        teacher_id: (newAssessment as any).teacherId || 'current-teacher',
       };
-      setAssessments(prev => [...prev, assessment]);
-      setNewAssessment({
-        studentId: '',
-        subject: '',
-        assessmentType: 'test',
-        assessmentName: '',
-        score: '',
-        maxScore: '100',
-        date: new Date().toISOString().split('T')[0],
-        term: 'Term 1'
-      });
-      setShowAddForm(false);
+      try {
+        const res = await fetch('http://localhost:5051/assessments/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(assessment)
+        });
+        if (!res.ok) throw new Error('Failed to save assessment');
+        // Refetch assessments and map fields
+        const updated: BackendAssessment[] = await fetch('http://localhost:5051/assessments').then(r => r.json());
+        setAssessments(updated.map((a: BackendAssessment) => ({
+          ...a,
+          id: a.id || `${a.student_id}_${a.subject}_${a.date}_${a.assessment_name}`,
+          studentId: a.student_id,
+          assessmentType: a.assessment_type as 'test' | 'quiz' | 'exam' | 'assignment' | 'project',
+          assessmentName: a.assessment_name,
+          maxScore: a.max_score,
+          teacherId: a.teacher_id ?? '',
+          term: a.term ?? '',
+        })));
+        setShowAddForm(false);
+      } catch (err) {
+        setError('Failed to save assessment.');
+      }
     }
   };
 
   const getFilteredAssessments = () => {
-    return assessments.filter(assessment => {
+    return classAssessments.filter(assessment => {
       const matchesStudent = !selectedStudent || assessment.studentId === selectedStudent;
       const matchesSubject = !selectedSubject || assessment.subject === selectedSubject;
       return matchesStudent && matchesSubject;
@@ -82,14 +142,14 @@ const AssessmentScores: React.FC = () => {
   };
 
   const getStudentAverage = (studentId: string) => {
-    const studentAssessments = assessments.filter(a => a.studentId === studentId);
+    const studentAssessments = classAssessments.filter(a => a.studentId === studentId);
     if (studentAssessments.length === 0) return 0;
     const total = studentAssessments.reduce((sum, a) => sum + (a.score / a.maxScore * 100), 0);
     return Math.round(total / studentAssessments.length);
   };
 
   const getSubjectAverage = (subject: string) => {
-    const subjectAssessments = assessments.filter(a => a.subject === subject);
+    const subjectAssessments = classAssessments.filter(a => a.subject === subject);
     if (subjectAssessments.length === 0) return 0;
     const total = subjectAssessments.reduce((sum, a) => sum + (a.score / a.maxScore * 100), 0);
     return Math.round(total / subjectAssessments.length);
@@ -97,20 +157,56 @@ const AssessmentScores: React.FC = () => {
 
   const filteredAssessments = getFilteredAssessments();
 
+  // Identify at-risk students (average score < 40%)
+  const atRiskStudents = filteredStudents.filter(student => getStudentAverage(student.id) < 40);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Student Search & Gender Filter */}
+      <div className="mb-2 flex flex-col sm:flex-row items-center gap-2">
+        <input
+          type="text"
+          placeholder="Search students by name..."
+          value={studentSearch}
+          onChange={e => setStudentSearch(e.target.value)}
+          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <select
+          value={genderFilter}
+          onChange={e => setGenderFilter(e.target.value)}
+          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">All Genders</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      {atRiskStudents.length > 0 && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Alert:</strong>
+          <span className="block sm:inline ml-2">The following students are at risk (average score below 40%):</span>
+          <ul className="list-disc ml-6 mt-2">
+            {atRiskStudents.map(student => (
+              <li key={student.id}>{student.name} (Avg: {getStudentAverage(student.id)}%)</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Assessment Scores</h1>
           <p className="text-gray-600">Track and manage student assessment performance</p>
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Assessment</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
+            onClick={() => setShowAddForm(true)}
+          >
+            <Plus className="w-4 h-4" /> Add Assessment
+          </button>
+          <button className="text-blue-600 underline text-sm font-medium ml-2" onClick={() => setSelectedClassId(null)}>Change Class</button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -124,7 +220,7 @@ const AssessmentScores: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Students</option>
-              {students.map(student => (
+              {filteredStudents.map(student => (
                 <option key={student.id} value={student.id}>{student.name}</option>
               ))}
             </select>
@@ -223,7 +319,7 @@ const AssessmentScores: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredAssessments.map((assessment) => {
-                const student = students.find(s => s.id === assessment.studentId);
+                const student = filteredStudents.find(s => s.id === assessment.studentId);
                 const percentage = Math.round((assessment.score / assessment.maxScore) * 100);
                 return (
                   <tr key={assessment.id} className="hover:bg-gray-50">
@@ -298,7 +394,7 @@ const AssessmentScores: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">Select Student</option>
-                  {students.map(student => (
+                  {filteredStudents.map(student => (
                     <option key={student.id} value={student.id}>{student.name}</option>
                   ))}
                 </select>
