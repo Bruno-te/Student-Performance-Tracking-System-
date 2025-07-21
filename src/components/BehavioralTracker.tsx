@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, AlertTriangle, Award, Clock, Filter } from 'lucide-react';
 import { Student, BehavioralRecord } from '../types';
+import ClassGridSelector from './ClassGridSelector';
+
+// Extend Student type to include gender for this component
+interface StudentWithGender extends Student {
+  gender?: string;
+}
 
 const BehavioralTracker: React.FC = () => {
   // All hooks at the top
   const [behavioralRecords, setBehavioralRecords] = useState<BehavioralRecord[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentWithGender[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -21,6 +27,9 @@ const BehavioralTracker: React.FC = () => {
     severity: 'low' as const,
     actionTaken: ''
   });
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  const [studentSearch, setStudentSearch] = useState("");
+  const [genderFilter, setGenderFilter] = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -29,8 +38,17 @@ const BehavioralTracker: React.FC = () => {
       fetch('http://localhost:5051/behavioral').then(res => res.json()),
     ])
       .then(([studentsData, behavioralData]) => {
-        setStudents(studentsData);
-        setBehavioralRecords(behavioralData);
+        setStudents(studentsData.map((s: any) => ({
+          ...s,
+          class: String(s.class_id ?? ''),
+          gender: s.gender ?? '',
+        })));
+        setBehavioralRecords(behavioralData.map(log => ({
+          ...log,
+          studentId: log.student_id,
+          actionTaken: log.action_taken,
+          reportedBy: log.reported_by,
+        })));
         setLoading(false);
       })
       .catch(() => {
@@ -39,33 +57,53 @@ const BehavioralTracker: React.FC = () => {
       });
   }, []);
 
+  // Only show students in the selected class and matching search and gender
+  const filteredStudents = students.filter((student: StudentWithGender) =>
+    (selectedClassId == null || student.class === String(selectedClassId)) &&
+    student.name.toLowerCase().includes(studentSearch.toLowerCase()) &&
+    (genderFilter === '' || (student.gender && student.gender.toLowerCase() === genderFilter))
+  );
+  const filteredRecords = behavioralRecords.filter(record => filteredStudents.some(s => s.id === record.studentId));
+
   if (loading) return <div>Loading behavioral records...</div>;
   if (error) return <div className="text-red-500">{error}</div>;
 
-  const handleAddRecord = () => {
+  if (!selectedClassId) {
+    return <ClassGridSelector onSelect={setSelectedClassId} />;
+  }
+
+  const handleAddRecord = async () => {
     if (newRecord.studentId && newRecord.description) {
-      const record: BehavioralRecord = {
-        id: Date.now().toString(),
-        studentId: newRecord.studentId,
+      const record = {
+        student_id: newRecord.studentId,
         date: new Date().toISOString().split('T')[0],
         type: newRecord.type,
         category: newRecord.category,
         description: newRecord.description,
         severity: newRecord.type === 'negative' ? newRecord.severity : undefined,
-        actionTaken: newRecord.actionTaken || undefined,
-        reportedBy: 'Current Teacher',
+        action_taken: newRecord.actionTaken || undefined,
+        reported_by: 'Current Teacher',
         timestamp: new Date().toISOString()
       };
-      setBehavioralRecords(prev => [...prev, record]);
-      setNewRecord({
-        studentId: '',
-        type: 'positive',
-        category: 'discipline',
-        description: '',
-        severity: 'low',
-        actionTaken: ''
-      });
-      setShowAddForm(false);
+      try {
+        const res = await fetch('http://localhost:5051/behavioral/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(record)
+        });
+        if (!res.ok) throw new Error('Failed to save behavioral record');
+        // Refetch behavioral records and map fields
+        const updated = await fetch('http://localhost:5051/behavioral/').then(r => r.json());
+        setBehavioralRecords(updated.map(log => ({
+          ...log,
+          studentId: log.student_id,
+          actionTaken: log.action_taken,
+          reportedBy: log.reported_by,
+        })));
+        setShowAddForm(false);
+      } catch (err) {
+        setError('Failed to save behavioral record');
+      }
     }
   };
 
@@ -104,24 +142,45 @@ const BehavioralTracker: React.FC = () => {
     }
   };
 
-  const filteredRecords = getFilteredRecords();
   const positiveRecords = filteredRecords.filter(r => r.type === 'positive').length;
   const negativeRecords = filteredRecords.filter(r => r.type === 'negative').length;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Student Search & Gender Filter */}
+      <div className="mb-2 flex flex-col sm:flex-row items-center gap-2">
+        <input
+          type="text"
+          placeholder="Search students by name..."
+          value={studentSearch}
+          onChange={e => setStudentSearch(e.target.value)}
+          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <select
+          value={genderFilter}
+          onChange={e => setGenderFilter(e.target.value)}
+          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">All Genders</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Behavioral Tracker</h1>
           <p className="text-gray-600">Monitor and record student behavioral patterns</p>
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Record</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
+            onClick={() => setShowAddForm(true)}
+          >
+            <Plus className="w-4 h-4" /> Add Behavioral Record
+          </button>
+          <button className="text-blue-600 underline text-sm font-medium ml-2" onClick={() => setSelectedClassId(null)}>Change Class</button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -215,7 +274,7 @@ const BehavioralTracker: React.FC = () => {
         </div>
         <div className="p-4 sm:p-6">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 sm:gap-4">
-            {students.map(student => {
+            {filteredStudents.map(student => {
               const stats = getStudentBehaviorStats(student.id);
               return (
                 <div key={student.id} className="bg-gray-50 rounded-lg p-4">
@@ -332,7 +391,7 @@ const BehavioralTracker: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">Select Student</option>
-                  {students.map(student => (
+                  {filteredStudents.map(student => (
                     <option key={student.id} value={student.id}>{student.name}</option>
                   ))}
                 </select>
