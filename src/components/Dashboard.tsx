@@ -31,10 +31,7 @@ const Dashboard = () => {
       });
   }, []);
 
-  if (loading) return <div>Loading dashboard data...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
-
-  // Compute stats from real data
+  // Restore all logic to use students, attendance, and assessments as before
   const today = new Date().toISOString().split('T')[0];
   const presentToday = attendance.filter(a => a.date === today && a.status === 'present').length;
   const attendanceRate = students.length > 0 ? Math.round((presentToday / students.length) * 100) : 0;
