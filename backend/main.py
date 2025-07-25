@@ -1,8 +1,10 @@
+#importing the required Flask and libraries
 from flask import Flask, request, redirect, url_for, session, render_template_string
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 
+#initialazing the flask application
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
@@ -12,6 +14,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # -------------------- MODELS --------------------
+# Define a user model for the users table
 class User(db.Model):
     __tablename__ = 'users'
     user_id = db.Column(db.Integer, primary_key=True)
@@ -21,8 +24,7 @@ class User(db.Model):
     email = db.Column(db.String(100))
 
 # -------------------- ROUTES --------------------
-
-# Sign-up page
+# Route for Sign-up page
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
