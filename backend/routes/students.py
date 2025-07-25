@@ -1,13 +1,17 @@
+# -------------------- IMPORTS ----------------------
 import sys
 import os
+# Adding the parent directory to the system path so imports could work
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Importing the necessary Flask and database components
 from flask import Flask, Blueprint, request, jsonify
 from models import db, Student
 import datetime
-
+# Create a blueprint for student related routes
 students_bp = Blueprint('students', __name__)
 
+# Get all students
 @students_bp.route('/', methods=['GET'])
 def get_students():
     students = Student.query.all()
@@ -17,9 +21,11 @@ def get_students():
         'class_id': s.class_id
     } for s in students])
 
+# Add new students
 @students_bp.route('/', methods=['POST'])
 def add_student():
     data = request.get_json()
+    # create a new student object with data from the request 
     student = Student(
         full_name=data['full_name'],
         gender=data.get('gender'),
@@ -27,6 +33,7 @@ def add_student():
         class_id=data.get('class_id'),
         guardian_contact=data.get('guardian_contact')
     )
+    # Add the student to the database
     db.session.add(student)
     db.session.commit()
     return jsonify({'message': 'Student added', 'id': student.student_id}), 201
