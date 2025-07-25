@@ -1,18 +1,18 @@
+# -------------------- IMPORTS ----------------------
 import sys
 import os
+# Adding the parent directory to the system path so imports could work
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Importing the necessary Flask and database components
 from flask import Flask, Blueprint, request, jsonify
 from models import db, Student, Class, Guardian, EmergencyContact
 import datetime
-import uuid
-from flask_cors import CORS, cross_origin
 
 students_bp = Blueprint('students', __name__)
 CORS(students_bp)
 
-@students_bp.route('/', methods=['GET', 'OPTIONS'])
-@cross_origin()
+@students_bp.route('/', methods=['GET'])
 def get_students():
     if request.method == 'OPTIONS':
         return '', 200
@@ -41,41 +41,11 @@ def get_students():
         } for s in students
     ])
 
-@students_bp.route('/', methods=['POST', 'OPTIONS'])
-@students_bp.route('', methods=['POST', 'OPTIONS'])
-@cross_origin()
+@students_bp.route('/', methods=['POST'])
 def add_student():
     if request.method == 'OPTIONS':
         return '', 200
     data = request.get_json()
-    class_id = data.get('class_id')
-    if not class_id:
-        return jsonify({'message': 'class_id is required'}), 400
-    # Ensure the class exists
-    class_obj = Class.query.get(class_id)
-    if not class_obj:
-        class_obj = Class(class_id=class_id, class_name=f'P{class_id}')
-        db.session.add(class_obj)
-        db.session.commit()
-    # Generate student_id in format RW-000
-    last_student = Student.query.order_by(Student.student_id.desc()).first()
-    if last_student and str(last_student.student_id).startswith('RW-'):
-        try:
-            last_num = int(str(last_student.student_id).split('-')[1])
-        except Exception:
-            last_num = 0
-    else:
-        last_num = 0
-    new_num = last_num + 1
-    new_student_id = f"RW-{new_num:03d}"
-    # Parse date of birth properly
-    dob = None
-    if data.get('dateOfBirth'):
-        try:
-            dob = datetime.datetime.strptime(data['dateOfBirth'], '%Y-%m-%d').date()
-        except ValueError:
-            return jsonify({'message': 'Invalid date format for date of birth. Use YYYY-MM-DD'}), 400
-    
     student = Student(
         student_id=new_student_id,
         full_name=data['full_name'],
@@ -84,6 +54,7 @@ def add_student():
         enrollment_date=datetime.date.today(),  # Automatically set enrollment date
         class_id=class_id
     )
+    # Add the student to the database
     db.session.add(student)
     db.session.flush()  # Get student_id for relationships
     # Save guardians
