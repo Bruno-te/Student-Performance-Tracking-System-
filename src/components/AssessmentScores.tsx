@@ -32,6 +32,8 @@ const AssessmentScores: React.FC = () => {
     term: 'Term 1'
   });
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  const [editAssessment, setEditAssessment] = useState<AssessmentScore | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<{id: string | number, open: boolean}>({id: '', open: false});
 
   // Type for assessment from backend
   type BackendAssessment = {
@@ -50,8 +52,8 @@ const AssessmentScores: React.FC = () => {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch('http://localhost:5051/api/students/').then(res => res.json()),
-      fetch('http://localhost:5051/assessments').then(res => res.json()),
+      fetch('http://127.0.0.1:5051/api/students/').then(res => res.json()),
+      fetch('http://127.0.0.1:5051/assessments').then(res => res.json()),
     ])
       .then(([studentsData, assessmentsData]: [any[], BackendAssessment[]]) => {
         setStudents(studentsData.map((s: any) => ({
@@ -98,24 +100,29 @@ const AssessmentScores: React.FC = () => {
     if (newAssessment.studentId && newAssessment.subject && newAssessment.assessmentName && newAssessment.score) {
       const assessment = {
         student_id: newAssessment.studentId,
-        subject: newAssessment.subject,
+        subject_name: newAssessment.subject,  // Fixed: backend expects 'subject_name'
         assessment_type: newAssessment.assessmentType,
         assessment_name: newAssessment.assessmentName,
-        score: newAssessment.score,
-        max_score: newAssessment.maxScore,
-        date: newAssessment.date,
+        score: Number(newAssessment.score), // Ensure number
+        max_score: Number(newAssessment.maxScore), // Ensure number
+        date_taken: newAssessment.date,  // Fixed: backend expects 'date_taken'
         term: newAssessment.term,
         teacher_id: (newAssessment as any).teacherId || 'current-teacher',
       };
+      console.log('Submitting assessment:', assessment); // Debugging
       try {
-        const res = await fetch('http://localhost:5051/assessments/', {
+        const res = await fetch('http://127.0.0.1:5051/assessments/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(assessment)
         });
-        if (!res.ok) throw new Error('Failed to save assessment');
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          setError(errorData.error || 'Failed to save assessment');
+          throw new Error(errorData.error || 'Failed to save assessment');
+        }
         // Refetch assessments and map fields
-        const updated: BackendAssessment[] = await fetch('http://localhost:5051/assessments').then(r => r.json());
+        const updated: BackendAssessment[] = await fetch('http://127.0.0.1:5051/assessments').then(r => r.json());
         setAssessments(updated.map((a: BackendAssessment) => ({
           ...a,
           id: a.id || `${a.student_id}_${a.subject}_${a.date}_${a.assessment_name}`,
@@ -128,7 +135,7 @@ const AssessmentScores: React.FC = () => {
         })));
         setShowAddForm(false);
       } catch (err) {
-        setError('Failed to save assessment.');
+        // setError is already called above
       }
     }
   };
@@ -364,10 +371,10 @@ const AssessmentScores: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900">
+                        <button className="text-blue-600 hover:text-blue-900" onClick={() => setEditAssessment(assessment)}>
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button className="text-red-600 hover:text-red-900" onClick={() => setShowDeleteConfirm({id: assessment.id, open: true})}>
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -479,6 +486,78 @@ const AssessmentScores: React.FC = () => {
               >
                 Add Assessment
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {editAssessment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-700" onClick={() => setEditAssessment(null)}>&times;</button>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Assessment</h3>
+            {/* Form fields for editing assessment */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Score</label>
+                <input type="number" value={editAssessment.score} onChange={e => setEditAssessment({...editAssessment, score: Number(e.target.value)})} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Max Score</label>
+                <input type="number" value={editAssessment.max_score} onChange={e => setEditAssessment({...editAssessment, max_score: Number(e.target.value)})} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              {/* Add more fields as needed */}
+            </div>
+            <div className="flex justify-end space-x-3 mt-6">
+              <button onClick={() => setEditAssessment(null)} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
+              <button onClick={async () => {
+                // Save changes
+                await fetch(`http://127.0.0.1:5051/assessments/${editAssessment.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(editAssessment)
+                });
+                setEditAssessment(null);
+                // Refetch assessments
+                const updated = await fetch('http://127.0.0.1:5051/assessments').then(r => r.json());
+                setAssessments(updated.map((a: BackendAssessment) => ({
+                  ...a,
+                  id: a.id || `${a.student_id}_${a.subject}_${a.date}_${a.assessment_name}`,
+                  studentId: a.student_id,
+                  assessmentType: a.assessment_type as 'test' | 'quiz' | 'exam' | 'assignment' | 'project',
+                  assessmentName: a.assessment_name,
+                  maxScore: a.max_score,
+                  teacherId: a.teacher_id ?? '',
+                  term: a.term ?? '',
+                })));
+              }} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDeleteConfirm.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-700" onClick={() => setShowDeleteConfirm({id: '', open: false})}>&times;</button>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Assessment</h3>
+            <p>Are you sure you want to delete this assessment?</p>
+            <div className="flex justify-end space-x-3 mt-6">
+              <button onClick={() => setShowDeleteConfirm({id: '', open: false})} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
+              <button onClick={async () => {
+                await fetch(`http://127.0.0.1:5051/assessments/${showDeleteConfirm.id}`, { method: 'DELETE' });
+                setShowDeleteConfirm({id: '', open: false});
+                // Refetch assessments
+                const updated = await fetch('http://127.0.0.1:5051/assessments').then(r => r.json());
+                setAssessments(updated.map((a: BackendAssessment) => ({
+                  ...a,
+                  id: a.id || `${a.student_id}_${a.subject}_${a.date}_${a.assessment_name}`,
+                  studentId: a.student_id,
+                  assessmentType: a.assessment_type as 'test' | 'quiz' | 'exam' | 'assignment' | 'project',
+                  assessmentName: a.assessment_name,
+                  maxScore: a.max_score,
+                  teacherId: a.teacher_id ?? '',
+                  term: a.term ?? '',
+                })));
+              }} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button>
             </div>
           </div>
         </div>

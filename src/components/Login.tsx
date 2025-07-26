@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import educationImg from '../images/education.jpg';
 
 interface LoginFormProps {
-  onLogin?: () => void;
+  onLogin?: (user: { username: string; role: string }) => void;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
@@ -38,7 +38,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('http://localhost:5051/api/login', {
+      const response = await fetch('http://127.0.0.1:5051/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -46,7 +46,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       const data = await response.json();
       setIsSubmitting(false);
       if (response.ok) {
-        if (onLogin) onLogin();
+        if (onLogin) onLogin({ username: data.username, role: data.role });
       } else {
         setFormError(data.message || 'Login failed');
       }

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Home, 
   Users, 
@@ -10,6 +10,7 @@ import {
   Menu, 
   X as CloseIcon 
 } from 'lucide-react';
+import SignUp from './SignUp';
 
 interface SidebarProps {
   activeTab: string;
@@ -17,9 +18,10 @@ interface SidebarProps {
   onAddStudent?: () => void;
   visible?: boolean; // new prop for mobile
   onClose?: () => void; // new prop for mobile
+  currentUser?: { role: string }; // new prop for current user
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onAddStudent, visible = false, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onAddStudent, visible = false, onClose, currentUser }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'students', label: 'Student Profiles', icon: Users },
@@ -28,6 +30,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onAddStudent,
     { id: 'participation', label: 'Participation', icon: MessageSquare },
     { id: 'behavioral', label: 'Behavioral', icon: AlertTriangle }
   ];
+
+  const [showSignUp, setShowSignUp] = useState(false);
 
   // Keyboard accessibility: close on Escape
   useEffect(() => {
@@ -106,17 +110,28 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onAddStudent,
           >
             <span>+ Add Student</span>
           </button>
+          {/* Admin-only: Create User button */}
+          {currentUser?.role === 'admin' && (
+            <button
+              onClick={() => setShowSignUp(true)}
+              className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition-colors mb-4 text-base sm:text-lg tracking-tight"
+            >
+              <span>+ Create User</span>
+            </button>
+          )}
           <div className="flex items-center space-x-3 mt-2">
             <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
               <User className="w-4 h-4 text-gray-600" />
             </div>
             <div>
-              <p className="text-sm sm:text-base font-semibold text-gray-900 leading-tight">Teacher</p>
-              <p className="text-xs sm:text-sm font-light text-gray-500">Primary 6A</p>
+              <p className="text-sm sm:text-base font-semibold text-gray-900 leading-tight">{currentUser?.username || 'User'}</p>
+              <p className="text-xs sm:text-sm font-light text-gray-500">{currentUser?.role ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1) : ''}</p>
             </div>
           </div>
         </div>
       </div>
+      {/* SignUp Modal */}
+      {showSignUp && <SignUp onClose={() => setShowSignUp(false)} />}
     </>
   );
 };

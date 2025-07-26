@@ -30,12 +30,13 @@ const BehavioralTracker: React.FC = () => {
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [studentSearch, setStudentSearch] = useState("");
   const [genderFilter, setGenderFilter] = useState("");
+  const [selectedRecord, setSelectedRecord] = useState<BehavioralRecord | null>(null);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch('http://localhost:5051/api/students/').then(res => res.json()),
-      fetch('http://localhost:5051/behavioral').then(res => res.json()),
+      fetch('http://127.0.0.1:5051/api/students/').then(res => res.json()),
+      fetch('http://127.0.0.1:5051/behavioral').then(res => res.json()),
     ])
       .then(([studentsData, behavioralData]) => {
         setStudents(studentsData.map((s: any) => ({
@@ -86,14 +87,14 @@ const BehavioralTracker: React.FC = () => {
         timestamp: new Date().toISOString()
       };
       try {
-        const res = await fetch('http://localhost:5051/behavioral/', {
+        const res = await fetch('http://127.0.0.1:5051/behavioral/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(record)
         });
         if (!res.ok) throw new Error('Failed to save behavioral record');
         // Refetch behavioral records and map fields
-        const updated = await fetch('http://localhost:5051/behavioral/').then(r => r.json());
+        const updated = await fetch('http://127.0.0.1:5051/behavioral/').then(r => r.json());
         setBehavioralRecords(updated.map(log => ({
           ...log,
           studentId: log.student_id,
@@ -328,7 +329,7 @@ const BehavioralTracker: React.FC = () => {
               filteredRecords.map(record => {
                 const student = students.find(s => s.id === record.studentId);
                 return (
-                  <div key={record.id} className="bg-gray-50 rounded-lg p-4">
+                  <div key={record.id} className="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-blue-50" onClick={() => setSelectedRecord(record)}>
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-3">
                         <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
@@ -471,6 +472,25 @@ const BehavioralTracker: React.FC = () => {
               >
                 Add Record
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedRecord && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-700" onClick={() => setSelectedRecord(null)}>&times;</button>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Behavioral Record Details</h3>
+            <div className="space-y-2">
+              <div><strong>Student:</strong> {students.find(s => s.id === selectedRecord.studentId)?.name}</div>
+              <div><strong>Type:</strong> {selectedRecord.type}</div>
+              <div><strong>Category:</strong> {selectedRecord.category}</div>
+              <div><strong>Severity:</strong> {selectedRecord.severity}</div>
+              <div><strong>Description:</strong> {selectedRecord.description}</div>
+              {selectedRecord.actionTaken && <div><strong>Action Taken:</strong> {selectedRecord.actionTaken}</div>}
+              <div><strong>Reported By:</strong> {selectedRecord.reportedBy}</div>
+              <div><strong>Date:</strong> {new Date(selectedRecord.date).toLocaleDateString()}</div>
             </div>
           </div>
         </div>

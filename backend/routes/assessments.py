@@ -1,95 +1,35 @@
-dev
 from flask import Blueprint, request, jsonify
-from models import db, Assessment
-from datetime import datetime
+from models import db, Assessment, Student
+from datetime import datetime, date
+from flask_cors import cross_origin
 
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from flask import Blueprint, request, jsonify
-from models import db, Assessment, Student
-from datetime import datetime, date
- main
-
 assessments_bp = Blueprint('assessments', __name__)
 
 @assessments_bp.route('/', methods=['GET'])
+@assessments_bp.route('', methods=['GET'])  # Handle both with and without trailing slash
+@cross_origin()
 def get_assessments():
-dev
     assessments = Assessment.query.all()
     return jsonify([
         {
-            'id': a.id,
+            'id': a.assessment_id,  # Fixed: use assessment_id instead of id
             'student_id': a.student_id,
-            'subject': a.subject,
+            'subject': a.subject_name,  # Fixed: use subject_name instead of subject
             'assessment_type': a.assessment_type,
-            'assessment_name': a.assessment_name,
+            'assessment_name': a.assessment_name if hasattr(a, 'assessment_name') else a.assessment_type,
             'score': a.score,
             'max_score': a.max_score,
-            'date': a.date.isoformat(),
+            'date': a.date_taken.isoformat(),  # Fixed: use date_taken instead of date
             'term': a.term,
-            'teacher_id': a.teacher_id
+            'teacher_id': getattr(a, 'teacher_id', 'unknown')  # Safe access in case field doesn't exist
         } for a in assessments
     ])
 
-@assessments_bp.route('/', methods=['POST'])
-def add_assessment():
-    data = request.get_json()
-    assessment = Assessment(
-        student_id=data['student_id'],
-        subject=data['subject'],
-        assessment_type=data['assessment_type'],
-        assessment_name=data['assessment_name'],
-        score=data['score'],
-        max_score=data['max_score'],
-        date=datetime.fromisoformat(data['date']).date(),
-        term=data.get('term'),
-        teacher_id=data.get('teacher_id')
-    )
-    db.session.add(assessment)
-    db.session.commit()
-    return jsonify({'message': 'Assessment added', 'id': assessment.id}), 201 
 
-    """List all assessments with optional filtering"""
-    # Get query parameters for filtering
-    student_id = request.args.get('student_id', type=int)
-    subject_name = request.args.get('subject')
-    term = request.args.get('term')
-    academic_year = request.args.get('academic_year')
-    assessment_type = request.args.get('type')
-    
-    # Build query with filters
-    query = Assessment.query
-    
-    if student_id:
-        query = query.filter_by(student_id=student_id)
-    if subject_name:
-        query = query.filter_by(subject_name=subject_name)
-    if term:
-        query = query.filter_by(term=term)
-    if academic_year:
-        query = query.filter_by(academic_year=academic_year)
-    if assessment_type:
-        query = query.filter_by(assessment_type=assessment_type)
-    
-    assessments = query.all()
-    
-    return jsonify([{
-        'id': a.assessment_id,
-        'student_id': a.student_id,
-        'subject_name': a.subject_name,
-        'assessment_type': a.assessment_type,
-        'score': a.score,
-        'max_score': a.max_score,
-        'percentage': round((a.score / a.max_score) * 100, 2) if a.max_score > 0 else 0,
-        'date_taken': a.date_taken.isoformat() if a.date_taken else None,
-        'term': a.term,
-        'academic_year': a.academic_year,
-        'notes': a.notes,
-        'created_at': a.created_at.isoformat() if a.created_at else None,
-        'updated_at': a.updated_at.isoformat() if a.updated_at else None
-    } for a in assessments])
 
 @assessments_bp.route('/<int:assessment_id>', methods=['GET'])
 def get_assessment(assessment_id):
@@ -260,4 +200,3 @@ def get_assessment_statistics():
     }
     
     return jsonify(stats)
-main

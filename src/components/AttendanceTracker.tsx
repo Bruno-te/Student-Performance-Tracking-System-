@@ -38,8 +38,8 @@ const AttendanceTracker: React.FC = () => {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch('http://localhost:5051/api/students/').then(res => res.json()),
-      fetch('http://localhost:5051/attendance').then(res => res.json()),
+      fetch('http://127.0.0.1:5051/api/students/').then(res => res.json()),
+      fetch('http://127.0.0.1:5051/attendance').then(res => res.json()),
     ])
       .then(([studentsData, attendanceData]) => {
         setStudents(studentsData.map((s: any) => ({
@@ -183,11 +183,12 @@ const AttendanceTracker: React.FC = () => {
   // Confirm attendance handler
   const handleConfirmAttendance = async () => {
     try {
-      // Send POST to backend (adjust endpoint as needed)
-      const res = await fetch('/api/attendance/confirm', {
+      // Send POST to backend batch endpoint
+      const recordsToSave = attendanceRecords.filter(r => r.date === selectedDate && students.find(s => s.id === r.studentId && s.class === String(selectedClassId)));
+      const res = await fetch('/attendance/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: selectedDate, classId: selectedClassId, records: attendanceRecords.filter(r => r.date === selectedDate && students.find(s => s.id === r.studentId && s.class_id === selectedClassId)) })
+        body: JSON.stringify(recordsToSave)
       });
       if (res.ok) {
         setAttendanceConfirmed(prev => ({ ...prev, [confirmKey]: true }));

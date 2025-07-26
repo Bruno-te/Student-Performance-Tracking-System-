@@ -32,8 +32,8 @@ const ParticipationLogger: React.FC = () => {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch('http://localhost:5051/api/students/').then(res => res.json()),
-      fetch('http://localhost:5051/participation').then(res => res.json()),
+      fetch('http://127.0.0.1:5051/api/students/').then(res => res.json()),
+      fetch('http://127.0.0.1:5051/participation').then(res => res.json()),
     ])
       .then(([studentsData, participationData]) => {
         setStudents(studentsData.map((s: any) => ({
@@ -75,22 +75,24 @@ const ParticipationLogger: React.FC = () => {
       const log = {
         student_id: newLog.studentId,
         date: selectedDate,
+        event_name: `${newLog.subject} - ${newLog.activityType}`,  // Backend expects 'event_name'
+        status: newLog.rating,  // Backend expects 'status' (using rating as status)
+        remarks: newLog.description,  // Backend expects 'remarks'
+        // Additional fields for compatibility
         subject: newLog.subject,
         activity_type: newLog.activityType,
-        description: newLog.description,
-        rating: newLog.rating,
         teacher_id: 'current-teacher',
         timestamp: new Date().toISOString()
       };
       try {
-        const res = await fetch('http://localhost:5051/participation/', {
+        const res = await fetch('http://127.0.0.1:5051/participation/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(log)
         });
         if (!res.ok) throw new Error('Failed to save participation log');
         // Refetch participation logs and map fields
-        const updated = await fetch('http://localhost:5051/participation/').then(r => r.json());
+        const updated = await fetch('http://127.0.0.1:5051/participation/').then(r => r.json());
         setParticipationLogs(updated.map(log => ({
           ...log,
           studentId: log.student_id,

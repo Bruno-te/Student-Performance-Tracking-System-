@@ -20,33 +20,7 @@ def log_attendance():
     )
     db.session.add(attendance)
     db.session.commit()
-dev
     return jsonify({'message': 'Attendance logged'}), 201
-
-@attendance_bp.route('/', methods=['GET'])
-def get_attendance():
-    from datetime import datetime
-    date_str = request.args.get('date')
-    query = Attendance.query
-    if date_str:
-        try:
-            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-            query = query.filter_by(date=date_obj)
-        except ValueError:
-            return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
-    attendance_records = query.all()
-    result = []
-    for record in attendance_records:
-        result.append({
-            'attendance_id': record.attendance_id,
-            'student_id': record.student_id,
-            'class_id': record.class_id,
-            'date': record.date.isoformat(),
-            'status': record.status
-        })
-    return jsonify(result), 200
-
-    return jsonify({'message': 'Attendance logged', 'id': attendance.id}), 201
 
 # List all attendance records
 @attendance_bp.route('/', methods=['GET'])
@@ -66,7 +40,7 @@ def get_all_attendance():
     records = query.all()
     return jsonify([
         {
-            'id': r.id,
+            'attendance_id': r.attendance_id,
             'student_id': r.student_id,
             'class_id': r.class_id,
             'date': r.date,
@@ -75,13 +49,13 @@ def get_all_attendance():
     ])
 
 # Get a specific record
-@attendance_bp.route('/<int:id>', methods=['GET'])
-def get_attendance(id):
-    record = Attendance.query.get(id)
+@attendance_bp.route('/<int:attendance_id>', methods=['GET'])
+def get_attendance_by_id(attendance_id):
+    record = Attendance.query.get(attendance_id)
     if not record:
         return jsonify({'error': 'Record not found'}), 404
     return jsonify({
-        'id': record.id,
+        'attendance_id': record.attendance_id,
         'student_id': record.student_id,
         'class_id': record.class_id,
         'date': record.date,
@@ -89,9 +63,9 @@ def get_attendance(id):
     })
 
 # Update an attendance record
-@attendance_bp.route('/<int:id>', methods=['PUT'])
-def update_attendance(id):
-    record = Attendance.query.get(id)
+@attendance_bp.route('/<int:attendance_id>', methods=['PUT'])
+def update_attendance(attendance_id):
+    record = Attendance.query.get(attendance_id)
     if not record:
         return jsonify({'error': 'Record not found'}), 404
 
@@ -105,13 +79,34 @@ def update_attendance(id):
     return jsonify({'message': 'Attendance updated'})
 
 #  Delete a record
-@attendance_bp.route('/<int:id>', methods=['DELETE'])
-def delete_attendance(id):
-    record = Attendance.query.get(id)
+@attendance_bp.route('/<int:attendance_id>', methods=['DELETE'])
+def delete_attendance(attendance_id):
+    record = Attendance.query.get(attendance_id)
     if not record:
         return jsonify({'error': 'Record not found'}), 404
 
     db.session.delete(record)
     db.session.commit()
     return jsonify({'message': 'Attendance record deleted'})
-main
+
+# Batch log attendance
+@attendance_bp.route('/batch', methods=['POST'])
+def log_attendance_batch():
+    data = request.get_json()
+    if not isinstance(data, list):
+        return jsonify({'error': 'Expected a list of attendance records'}), 400
+    created = 0
+    for record in data:
+        required_fields = ['student_id', 'class_id', 'date', 'status']
+        if not all(field in record for field in required_fields):
+            continue  # skip invalid records
+        attendance = Attendance(
+            student_id=record['student_id'],
+            class_id=record['class_id'],
+            date=record['date'],
+            status=record['status']
+        )
+        db.session.add(attendance)
+        created += 1
+    db.session.commit()
+    return jsonify({'message': f'Batch attendance logged: {created} records'}), 201

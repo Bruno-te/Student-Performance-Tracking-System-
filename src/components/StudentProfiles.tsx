@@ -64,7 +64,9 @@ const StudentProfiles: React.FC = () => {
         setAttendance(attendanceData.map((a: any) => ({
           ...a,
           studentId: a.student_id,
-          markedBy: a.marked_by,
+          status: a.status ?? a.attendance_status ?? '',
+          date: a.date ?? a.attendance_date ?? a.timestamp ?? '',
+          markedBy: a.marked_by ?? a.teacher_id ?? '',
         })));
         setAssessments(assessmentsData.map((a: any) => ({
           ...a,
@@ -77,8 +79,12 @@ const StudentProfiles: React.FC = () => {
         setParticipation(participationData.map((p: any) => ({
           ...p,
           studentId: p.student_id,
-          activityType: p.activity_type,
-          teacherId: p.teacher_id,
+          subject: p.subject || p.event_name || '',
+          activityType: p.activity_type || p.type || '',
+          description: p.description || p.remarks || '',
+          rating: p.rating ?? p.status ?? 0,
+          date: p.date || p.timestamp || '',
+          teacherId: p.teacher_id ?? '',
         })));
         setBehavioral(behavioralData.map((b: any) => ({
           ...b,
@@ -364,7 +370,7 @@ const StudentProfiles: React.FC = () => {
                           <span>{new Date(p.date).toLocaleDateString()}</span>
                           <span className="font-semibold text-yellow-600">{p.rating}★</span>
                         </div>
-                        <div className="text-sm font-semibold text-gray-900">{p.subject} <span className="ml-2 text-xs text-gray-500">{p.activityType.replace('_', ' ')}</span></div>
+                        <div className="text-sm font-semibold text-gray-900">{p.subject} <span className="ml-2 text-xs text-gray-500">{(p.activityType || '').replace('_', ' ')}</span></div>
                         <div className="text-xs text-gray-700">{p.description}</div>
                       </div>
                     ))
@@ -390,7 +396,7 @@ const StudentProfiles: React.FC = () => {
                           <tr key={i} className="odd:bg-white even:bg-yellow-50">
                             <td>{new Date(p.date).toLocaleDateString()}</td>
                             <td>{p.subject}</td>
-                            <td>{p.activityType.replace('_', ' ')}</td>
+                            <td>{(p.activityType || '').replace('_', ' ')}</td>
                             <td>{p.description}</td>
                             <td className="text-yellow-600 font-semibold">{p.rating}</td>
                           </tr>

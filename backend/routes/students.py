@@ -68,11 +68,20 @@ def add_student():
         last_num = 0
     new_num = last_num + 1
     new_student_id = f"RW-{new_num:03d}"
+    # Parse date of birth properly
+    dob = None
+    if data.get('dateOfBirth'):
+        try:
+            dob = datetime.datetime.strptime(data['dateOfBirth'], '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'message': 'Invalid date format for date of birth. Use YYYY-MM-DD'}), 400
+    
     student = Student(
         student_id=new_student_id,
         full_name=data['full_name'],
         gender=data.get('gender'),
-        date_of_birth=data.get('date_of_birth'),
+        date_of_birth=dob,
+        enrollment_date=datetime.date.today(),  # Automatically set enrollment date
         class_id=class_id
     )
     db.session.add(student)
@@ -110,6 +119,7 @@ def get_student(student_id):
         'name': student.full_name,
         'gender': student.gender,
         'date_of_birth': student.date_of_birth.isoformat() if student.date_of_birth else None,
+        'enrollment_date': student.enrollment_date.isoformat() if student.enrollment_date else None,
         'class_id': student.class_id,
         'guardians': [
             {

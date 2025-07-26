@@ -31,6 +31,7 @@ class Student(db.Model):
     full_name = db.Column(db.String(100), nullable=False)
     gender = db.Column(db.String(10))
     date_of_birth = db.Column(db.Date)
+    enrollment_date = db.Column(db.Date, default=db.func.current_date())
     class_id = db.Column(db.Integer, db.ForeignKey('classes.class_id'))
     guardian_contact = db.Column(db.String(15))
     # Relationships
@@ -82,7 +83,7 @@ class Attendance(db.Model):
 class Assessment(db.Model):
     __tablename__ = 'assessments'
     assessment_id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('students.student_id'), nullable=False)
+    student_id = db.Column(db.String, db.ForeignKey('students.student_id'), nullable=False)
     subject_id = db.Column(db.Integer, nullable=False)  # For later if a subjects table is create
     subject_name = db.Column(db.String(100), nullable=False)  # Temporary until subjects table exists
     assessment_type = db.Column(db.String(50), nullable=False)  # 'quiz', 'test', 'exam', 'assignment'
@@ -98,7 +99,7 @@ class Assessment(db.Model):
 class Behavioral(db.Model):
     __tablename__ = 'behavior'
     behavior_id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('students.student_id'), nullable=False)
+    student_id = db.Column(db.String, db.ForeignKey('students.student_id'), nullable=False)
     behavior_type = db.Column(db.String(10), nullable=False)  # 'positive' or 'negative'
     category = db.Column(db.String(50), nullable=False)       # e.g., 'participation', 'lateness', etc.
     notes = db.Column(db.Text)
@@ -110,7 +111,8 @@ class Behavioral(db.Model):
 class Participation(db.Model):
     __tablename__ = 'participation'
     participation_id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('student.student_id'), nullable=False)
+    student_id = db.Column(db.String, db.ForeignKey('students.student_id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('classes.class_id'))
     event_name = db.Column(db.String(100), nullable=False)
     date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), nullable=False)

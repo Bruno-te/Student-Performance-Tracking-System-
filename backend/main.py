@@ -11,14 +11,16 @@ from routes.assessments import assessments_bp
 from routes.attendance import attendance_bp
 from routes.participation import participation_bp
 from routes.behavioral import behavioral_bp
+from routes.admin import admin_bp
 
 app = Flask(__name__)
 CORS(
     app,
-    resources={r"/*": {"origins": "http://localhost:5173"}},
+    resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}},
     supports_credentials=True,
-    allow_headers=["Content-Type", "Authorization"],
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    expose_headers=["Content-Type", "Authorization"]
 )
 app.secret_key = 'your_secret_key'
 
@@ -71,24 +73,36 @@ def signup():
 @app.route('/api/login', methods=['POST', 'OPTIONS'])
 def api_login():
     if request.method == 'OPTIONS':
-        return '', 200
-    # Try to get JSON, fallback to form data
-    data = request.get_json(silent=True)
-    if not data:
-        data = request.form
-    username = data.get('username') if data else None
-    remember = data.get('remember', False) if data else False
-    print("DEBUG: Received data:", data)
-    print("DEBUG: Username:", username, "Remember:", remember)
-    if not username:
-        return jsonify({'success': False, 'message': 'Username is required.'}), 400
-    user = User.query.filter_by(username=username).first()
-    if user:
-        session['user_id'] = user.user_id
-        session['username'] = user.username
-        session.permanent = remember
-        return jsonify({'success': True, 'username': user.username, 'role': user.role})
-    return jsonify({'success': False, 'message': 'Invalid username'}), 401
+        response = jsonify({})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+    
+    try:
+        # Try to get JSON, fallback to form data
+        data = request.get_json(silent=True)
+        if not data:
+            data = request.form
+        username = data.get('username') if data else None
+        remember = data.get('remember', False) if data else False
+        print("DEBUG: Received data:", data)
+        print("DEBUG: Username:", username, "Remember:", remember)
+        
+        if not username:
+            return jsonify({'success': False, 'message': 'Username is required.'}), 400
+        
+        user = User.query.filter_by(username=username).first()
+        if user:
+            session['user_id'] = user.user_id
+            session['username'] = user.username
+            session.permanent = remember
+            return jsonify({'success': True, 'username': user.username, 'role': user.role})
+        return jsonify({'success': False, 'message': 'Invalid username'}), 401
+    
+    except Exception as e:
+        print(f"Login error: {e}")
+        return jsonify({'success': False, 'message': 'Internal server error'}), 500
 
 @app.route('/api/signup', methods=['POST', 'OPTIONS'])
 def api_signup():
@@ -140,12 +154,12 @@ def logout():
 @app.route('/test')
 def test():
     return "Test!"
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.register_blueprint(students_bp, url_prefix='/api/students/')
     app.register_blueprint(assessments_bp, url_prefix='/assessments')
     app.register_blueprint(attendance_bp, url_prefix='/attendance')
     app.register_blueprint(participation_bp, url_prefix='/participation')
     app.register_blueprint(behavioral_bp, url_prefix='/behavioral')
+    app.register_blueprint(admin_bp, url_prefix='/admin')
     app.run(debug=True, host='127.0.0.1', port=5051)

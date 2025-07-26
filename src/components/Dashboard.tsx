@@ -11,6 +11,7 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [studentModal, setStudentModal] = useState<{ open: boolean; student: any | null }>({ open: false, student: null });
   const [activityModal, setActivityModal] = useState<{ open: boolean; activity: any | null }>({ open: false, activity: null });
+  const [behavioral, setBehavioral] = useState<any[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -19,11 +20,13 @@ const Dashboard = () => {
       fetch('http://localhost:5051/api/students/').then(res => res.json()),
       fetch('http://localhost:5051/attendance').then(res => res.json()),
       fetch('http://localhost:5051/assessments').then(res => res.json()),
+      fetch('http://localhost:5051/behavioral').then(res => res.json()),
     ])
-      .then(([studentsData, attendanceData, assessmentsData]) => {
+      .then(([studentsData, attendanceData, assessmentsData, behavioralData]) => {
         setStudents(studentsData);
         setAttendance(attendanceData);
         setAssessments(assessmentsData);
+        setBehavioral(behavioralData);
         setLoading(false);
       })
       .catch(() => {
@@ -36,7 +39,7 @@ const Dashboard = () => {
   const today = new Date().toISOString().split('T')[0];
   const presentToday = attendance.filter(a => a.date === today && a.status === 'present').length;
   const attendanceRate = students.length > 0 ? Math.round((presentToday / students.length) * 100) : 0;
-  const avgScore = assessments.length > 0 ? Math.round(assessments.reduce((sum, score) => sum + (score.score / score.maxScore * 100), 0) / assessments.length) : 0;
+  const avgScore = assessments.length > 0 ? Math.round(assessments.reduce((sum, score) => sum + (score.score / score.max_score * 100), 0) / assessments.length) : 0;
   const stats = {
     totalStudents: students.length,
     presentToday,
@@ -66,7 +69,7 @@ const Dashboard = () => {
   const subjectScores: { [subject: string]: { total: number; count: number } } = {};
   assessments.forEach(a => {
     if (!subjectScores[a.subject]) subjectScores[a.subject] = { total: 0, count: 0 };
-    subjectScores[a.subject].total += (a.score / a.maxScore) * 100;
+    subjectScores[a.subject].total += (a.score / a.max_score) * 100;
     subjectScores[a.subject].count += 1;
   });
   const subjectData = Object.entries(subjectScores).map(([subject, { total, count }]) => ({
@@ -80,7 +83,7 @@ const Dashboard = () => {
     const student = students.find(s => s.id === a.student_id);
     if (!student) return;
     if (!studentScores[student.id]) studentScores[student.id] = { name: student.name, total: 0, count: 0 };
-    studentScores[student.id].total += (a.score / a.maxScore) * 100;
+    studentScores[student.id].total += (a.score / a.max_score) * 100;
     studentScores[student.id].count += 1;
   });
   const topStudents = Object.entries(studentScores)
@@ -104,15 +107,51 @@ const Dashboard = () => {
     id: a.id,
     type: 'assignment',
     student: students.find(s => s.id === a.student_id)?.name || 'Unknown',
-    detail: `Submitted ${a.subject} Assessment`,
+    detail: `Submitted ${a.subject} ${a.assessment_type ? a.assessment_type.charAt(0).toUpperCase() + a.assessment_type.slice(1) : 'Assessment'}`,
     time: a.date
   }));
   const recentActivities = [...recentAttendance, ...recentAssessments]
     .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
     .slice(0, 5);
 
+  // At-risk logic
+  const failingStudents = students.filter(student => {
+    const studentAssessments = assessments.filter(a => a.student_id === student.id);
+    if (studentAssessments.length === 0) return false;
+    const avg = studentAssessments.reduce((sum, a) => sum + (a.score / a.max_score * 100), 0) / studentAssessments.length;
+    return avg < 40;
+  });
+  const missingClassStudents = students.filter(student => {
+    const studentAttendance = attendance.filter(a => a.student_id === student.id);
+    if (studentAttendance.length === 0) return false;
+    const present = studentAttendance.filter(a => a.status === 'present').length;
+    const rate = present / studentAttendance.length;
+    return rate < 0.75;
+  });
+  const badBehaviorStudents = students.filter(student => {
+    const negatives = behavioral.filter(b => b.student_id === student.id && b.type === 'negative').length;
+    return negatives >= 3;
+  });
+  const anyAtRisk = failingStudents.length > 0 || missingClassStudents.length > 0 || badBehaviorStudents.length > 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 font-sans">
+      {/* At-Risk Alert */}
+      {anyAtRisk && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative max-w-3xl mx-auto mt-6 mb-6" role="alert">
+          <strong className="font-bold">Attention:</strong>
+          <span className="block sm:inline ml-2">Some students are at risk:</span>
+          {failingStudents.length > 0 && (
+            <div className="mt-2"><strong>Failing Subjects:</strong> {failingStudents.map(s => s.name).join(', ')}</div>
+          )}
+          {missingClassStudents.length > 0 && (
+            <div className="mt-2"><strong>Missing Classes:</strong> {missingClassStudents.map(s => s.name).join(', ')}</div>
+          )}
+          {badBehaviorStudents.length > 0 && (
+            <div className="mt-2"><strong>Bad Behavior:</strong> {badBehaviorStudents.map(s => s.name).join(', ')}</div>
+          )}
+        </div>
+      )}
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-2 sm:px-6 py-4 sm:py-8">

@@ -9,16 +9,15 @@ def get_behavioral():
     records = Behavioral.query.all()
     return jsonify([
         {
-            'id': b.id,
+            'behavior_id': b.behavior_id,
             'student_id': b.student_id,
             'date': b.date.isoformat(),
-            'type': b.type,
+            'behavior_type': b.behavior_type,
             'category': b.category,
-            'description': b.description,
-            'severity': b.severity,
-            'action_taken': b.action_taken,
-            'reported_by': b.reported_by,
-            'timestamp': b.timestamp.isoformat() if b.timestamp else None
+            'notes': b.notes,
+            'teacher_id': b.teacher_id,
+            'created_at': b.created_at.isoformat() if b.created_at else None,
+            'updated_at': b.updated_at.isoformat() if b.updated_at else None
         } for b in records
     ])
 
@@ -27,15 +26,12 @@ def add_behavioral():
     data = request.get_json()
     record = Behavioral(
         student_id=data['student_id'],
-        date=datetime.fromisoformat(data['date']).date(),
-        type=data.get('type'),
-        category=data.get('category'),
-        description=data.get('description'),
-        severity=data.get('severity'),
-        action_taken=data.get('action_taken'),
-        reported_by=data.get('reported_by'),
-        timestamp=datetime.fromisoformat(data['timestamp']) if data.get('timestamp') else None
+        date=datetime.fromisoformat(data['date']).date() if data.get('date') else datetime.now().date(),
+        behavior_type=data.get('behavior_type', 'positive'),
+        category=data.get('category', ''),
+        notes=data.get('notes', ''),
+        teacher_id=data.get('teacher_id')
     )
     db.session.add(record)
     db.session.commit()
-    return jsonify({'message': 'Behavioral record added', 'id': record.id}), 201 
+    return jsonify({'message': 'Behavioral record added', 'behavior_id': record.behavior_id}), 201
