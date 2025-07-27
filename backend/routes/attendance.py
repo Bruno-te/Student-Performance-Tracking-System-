@@ -124,9 +124,90 @@ def confirm_attendance(attendance_id):
     record.status = 'Confirmed'
     db.session.commit()
     return jsonify({
-      'message': f'All attendance records for class {class_id} on {date} confirmed',
-      'total_records': len(records),
-      'confirmed': confirmed_count,
-      'already_confirmed': already_confirmed_count
+        'message': f'Attendance ID {attendance_id} confirmed successfully',
+        'attendance_id': attendance_id,
+        'status': 'Confirmed'
     }), 200
+
+# PUT /api/attendance/confirm/batch
+@attendance_bp.route('/confirm/batch', methods=['PUT'])
+def confirm_attendance_batch():
+    """Confirm multiple attendance records at once"""
+    data = request.get_json()
+    
+    if not data or 'attendance_ids' not in data:
+        return jsonify({'error': 'Missing attendance_ids in request body'}), 400
+    
+    attendance_ids = data['attendance_ids']
+    if not isinstance(attendance_ids, list):
+        return jsonify({'error': 'attendance_ids must be a list'}), 400
+    
+    confirmed_count = 0
+    already_confirmed_count = 0
+    not_found_ids = []
+    
+    for attendance_id in attendance_ids:
+        record = Attendance.query.get(attendance_id)
+        if not record:
+            not_found_ids.append(attendance_id)
+            continue
+            
+        if record.status == 'Confirmed':
+            already_confirmed_count += 1
+        else:
+            record.status = 'Confirmed'
+            confirmed_count += 1
+    
+    db.session.commit()
+    
+    response = {
+        'message': f'Batch confirmation completed',
+        'confirmed': confirmed_count,
+        'already_confirmed': already_confirmed_count,
+        'not_found': len(not_found_ids)
+    }
+    
+    if not_found_ids:
+        response['not_found_ids'] = not_found_ids
+    
+    return jsonify(response), 200
+
+# PUT /api/attendance/confirm/class
+@attendance_bp.route('/confirm/class', methods=['PUT'])
+def confirm_attendance_by_class():
+    """Confirm all attendance records for a specific class and date"""
+    data = request.get_json()
+    
+    required_fields = ['class_id', 'date']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'Missing field: {field}'}), 400
+    
+    class_id = data['class_id']
+    date = data['date']
+    
+    # Find all attendance records for this class and date
+    records = Attendance.query.filter_by(class_id=class_id, date=date).all()
+    
+    if not records:
+        return jsonify({'error': 'No attendance records found for the specified class and date'}), 404
+    
+    confirmed_count = 0
+    already_confirmed_count = 0
+    
+    for record in records:
+        if record.status == 'Confirmed':
+            already_confirmed_count += 1
+        else:
+            record.status = 'Confirmed'
+            confirmed_count += 1
+    
+    db.session.commit()
+    
+    return jsonify({
+        'message': f'All attendance records for class {class_id} on {date} confirmed',
+        'total_records': len(records),
+        'confirmed': confirmed_count,
+        'already_confirmed': already_confirmed_count
+    }), 200    
 
