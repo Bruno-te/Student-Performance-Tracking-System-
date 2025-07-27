@@ -145,12 +145,3 @@ class EmergencyContact(db.Model):
     last_name = db.Column(db.String(100))
     relationship = db.Column(db.String(50))
     contact = db.Column(db.String(15))
-class Parent(db.Model):
-    __tablename__ = 'parents'
-    parent_id = db.Column(db.Integer, primary_key=True)
-    full_name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=False)  # Hash it
-    student_id = db.Column(db.Integer, db.ForeignKey('students.student_id'), nullable=False)
-
-    student = db.relationship('Student', backref='parent', uselist=False)
