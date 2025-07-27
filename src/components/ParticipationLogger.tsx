@@ -1,16 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, MessageSquare, Star, Users, TrendingUp } from 'lucide-react';
-import { mockStudents, mockParticipation } from '../data/mockData';
-import { ParticipationLog } from '../types';
+import { ParticipationLog, Student } from '../types';
+import ClassGridSelector from './ClassGridSelector';
+
+// Extend Student type to include gender for this component
+interface StudentWithGender extends Student {
+  gender?: string;
+}
 
 const ParticipationLogger: React.FC = () => {
-  const [participationLogs, setParticipationLogs] = useState<ParticipationLog[]>(mockParticipation);
+  // All hooks at the top
+  const [participationLogs, setParticipationLogs] = useState<ParticipationLog[]>([]);
+  const [students, setStudents] = useState<StudentWithGender[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-
   const subjects = ['Mathematics', 'English', 'Science', 'Social Studies', 'Kinyarwanda', 'French'];
   const activityTypes = ['answer', 'question', 'discussion', 'presentation', 'group_work'];
-
   const [newLog, setNewLog] = useState({
     studentId: '',
     subject: '',
@@ -18,34 +25,90 @@ const ParticipationLogger: React.FC = () => {
     description: '',
     rating: 3 as const
   });
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  const [studentSearch, setStudentSearch] = useState("");
+  const [genderFilter, setGenderFilter] = useState("");
 
-  const handleAddLog = () => {
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      fetch('http://127.0.0.1:5051/api/students/').then(res => res.json()),
+      fetch('http://127.0.0.1:5051/participation').then(res => res.json()),
+    ])
+      .then(([studentsData, participationData]) => {
+        setStudents(studentsData.map((s: any) => ({
+          ...s,
+          class: String(s.class_id ?? ''),
+          gender: s.gender ?? '',
+        })));
+        setParticipationLogs(participationData.map(log => ({
+          ...log,
+          studentId: log.student_id,
+          activityType: log.activity_type,
+          teacherId: log.teacher_id,
+        })));
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to load data from backend.');
+        setLoading(false);
+      });
+  }, []);
+
+  // Only show students in the selected class and matching search and gender
+  const filteredStudents = students.filter((student: StudentWithGender) =>
+    (selectedClassId == null || student.class === String(selectedClassId)) &&
+    student.name.toLowerCase().includes(studentSearch.toLowerCase()) &&
+    (genderFilter === '' || (student.gender && student.gender.toLowerCase() === genderFilter))
+  );
+  const filteredLogs = participationLogs.filter(log => filteredStudents.some(s => s.id === log.studentId));
+
+  if (loading) return <div>Loading participation logs...</div>;
+  if (error) return <div className="text-red-500">{error}</div>;
+
+  if (!selectedClassId) {
+    return <ClassGridSelector onSelect={setSelectedClassId} />;
+  }
+
+  const handleAddLog = async () => {
     if (newLog.studentId && newLog.subject && newLog.description) {
-      const log: ParticipationLog = {
-        id: Date.now().toString(),
-        studentId: newLog.studentId,
+      const log = {
+        student_id: newLog.studentId,
         date: selectedDate,
+        event_name: `${newLog.subject} - ${newLog.activityType}`,  // Backend expects 'event_name'
+        status: newLog.rating,  // Backend expects 'status' (using rating as status)
+        remarks: newLog.description,  // Backend expects 'remarks'
+        // Additional fields for compatibility
         subject: newLog.subject,
-        activityType: newLog.activityType,
-        description: newLog.description,
-        rating: newLog.rating,
-        teacherId: 'current-teacher',
+        activity_type: newLog.activityType,
+        teacher_id: 'current-teacher',
         timestamp: new Date().toISOString()
       };
-      setParticipationLogs(prev => [...prev, log]);
-      setNewLog({
-        studentId: '',
-        subject: '',
-        activityType: 'answer',
-        description: '',
-        rating: 3
-      });
-      setShowAddForm(false);
+      try {
+        const res = await fetch('http://127.0.0.1:5051/participation/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(log)
+        });
+        if (!res.ok) throw new Error('Failed to save participation log');
+        // Refetch participation logs and map fields
+        const updated = await fetch('http://127.0.0.1:5051/participation/').then(r => r.json());
+        setParticipationLogs(updated.map(log => ({
+          ...log,
+          studentId: log.student_id,
+          activityType: log.activity_type,
+          teacherId: log.teacher_id,
+          // keep other fields as is
+        })));
+        setShowAddForm(false);
+      } catch (err) {
+        setError('Failed to save participation log');
+      }
     }
   };
 
   const getStudentParticipationStats = (studentId: string) => {
-    const studentLogs = participationLogs.filter(log => log.studentId === studentId);
+    const studentLogs = filteredLogs.filter(log => log.studentId === studentId);
     const totalActivities = studentLogs.length;
     const avgRating = totalActivities > 0 
       ? studentLogs.reduce((sum, log) => sum + log.rating, 0) / totalActivities 
@@ -70,22 +133,44 @@ const ParticipationLogger: React.FC = () => {
     return 'text-red-600';
   };
 
-  const todayLogs = participationLogs.filter(log => log.date === selectedDate);
+  const todayLogs = filteredLogs.filter(log => log.date === selectedDate);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Student Search & Gender Filter */}
+      <div className="mb-2 flex flex-col sm:flex-row items-center gap-2">
+        <input
+          type="text"
+          placeholder="Search students by name..."
+          value={studentSearch}
+          onChange={e => setStudentSearch(e.target.value)}
+          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <select
+          value={genderFilter}
+          onChange={e => setGenderFilter(e.target.value)}
+          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">All Genders</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Participation Logger</h1>
           <p className="text-gray-600">Track and record student classroom participation</p>
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Log Activity</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
+            onClick={() => setShowAddForm(true)}
+          >
+            <Plus className="w-4 h-4" /> Add Participation Log
+          </button>
+          <button className="text-blue-600 underline text-sm font-medium ml-2" onClick={() => setSelectedClassId(null)}>Change Class</button>
+        </div>
       </div>
 
       {/* Date Selection */}
@@ -102,7 +187,7 @@ const ParticipationLogger: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 sm:gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -151,12 +236,12 @@ const ParticipationLogger: React.FC = () => {
 
       {/* Student Participation Overview */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
+        <div className="p-4 border-b border-gray-100 sm:p-6">
           <h3 className="text-lg font-semibold text-gray-900">Student Participation Overview</h3>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockStudents.map(student => {
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 sm:gap-4">
+            {filteredStudents.map(student => {
               const stats = getStudentParticipationStats(student.id);
               return (
                 <div key={student.id} className="bg-gray-50 rounded-lg p-4">
@@ -216,7 +301,7 @@ const ParticipationLogger: React.FC = () => {
               </div>
             ) : (
               todayLogs.map(log => {
-                const student = mockStudents.find(s => s.id === log.studentId);
+                const student = filteredStudents.find(s => s.id === log.studentId);
                 return (
                   <div key={log.id} className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-start justify-between">
@@ -279,7 +364,7 @@ const ParticipationLogger: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">Select Student</option>
-                  {mockStudents.map(student => (
+                  {filteredStudents.map(student => (
                     <option key={student.id} value={student.id}>{student.name}</option>
                   ))}
                 </select>

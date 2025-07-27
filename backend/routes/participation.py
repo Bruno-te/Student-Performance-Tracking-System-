@@ -4,6 +4,21 @@ from datetime import datetime
 
 participation_bp = Blueprint('participation', __name__)
 
+@participation_bp.route('/date/<date>', methods=['GET'], strict_slashes=False)
+def get_participation_by_date(date):
+    logs = Participation.query.filter_by(date=datetime.fromisoformat(date).date()).all()
+    return jsonify([
+        {
+            'participation_id': p.participation_id,
+            'student_id': p.student_id,
+            'class_id': p.class_id,
+            'event_name': p.event_name,
+            'date': p.date.isoformat(),
+            'status': p.status,
+            'remarks': p.remarks
+        } for p in logs
+    ])
+
 # POST /api/participation
 @participation_bp.route('/', methods=['POST'])
 def add_participation():
@@ -82,4 +97,3 @@ def delete_participation(pid):
     db.session.delete(participation)
     db.session.commit()
     return jsonify({'message': 'Participation deleted successfully'}), 200
-

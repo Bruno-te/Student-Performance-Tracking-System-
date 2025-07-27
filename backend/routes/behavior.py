@@ -1,9 +1,5 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-
 from flask import Blueprint, request, jsonify
+<<<<<<< HEAD
 from models import db, behavior
 from datetime import date
 
@@ -23,62 +19,41 @@ def add_behavior(student_id):
     db.session.add(behavior)
     db.session.commit()
     return jsonify({'message': 'Behavior record added', 'id': behavior.behavior_id}), 201
+=======
+from models import db, Behavioral
+from datetime import datetime
+>>>>>>> d33c2e7582e78e40349d53ad46d984682688e515
 
+behavioral_bp = Blueprint('behavioral', __name__)
 
-# Get all behavior records for a student
-@behavior_bp.route('/students/<int:student_id>/behavior', methods=['GET'])
-def get_student_behavior(student_id):
-    behaviors = Behavior.query.filter_by(student_id=student_id).all()
+@behavioral_bp.route('/', methods=['GET'])
+def get_behavioral():
+    records = Behavioral.query.all()
     return jsonify([
         {
             'behavior_id': b.behavior_id,
+            'student_id': b.student_id,
+            'date': b.date.isoformat(),
             'behavior_type': b.behavior_type,
             'category': b.category,
             'notes': b.notes,
-            'date': b.date.isoformat(),
-            'teacher_id': b.teacher_id
-        }
-        for b in behaviors
+            'teacher_id': b.teacher_id,
+            'created_at': b.created_at.isoformat() if b.created_at else None,
+            'updated_at': b.updated_at.isoformat() if b.updated_at else None
+        } for b in records
     ])
 
-
-# Update an existing behavior record
-@behavior_bp.route('/behavior/<int:behavior_id>', methods=['PUT'])
-def update_behavior(behavior_id):
+@behavioral_bp.route('/', methods=['POST'])
+def add_behavioral():
     data = request.get_json()
-    behavior = Behavior.query.get_or_404(behavior_id)
-
-    behavior.behavior_type = data.get('behavior_type', behavior.behavior_type)
-    behavior.category = data.get('category', behavior.category)
-    behavior.notes = data.get('notes', behavior.notes)
-    behavior.teacher_id = data.get('teacher_id', behavior.teacher_id)
-    behavior.date = data.get('date', behavior.date)
-
+    record = Behavioral(
+        student_id=data['student_id'],
+        date=datetime.fromisoformat(data['date']).date() if data.get('date') else datetime.now().date(),
+        behavior_type=data.get('behavior_type', 'positive'),
+        category=data.get('category', ''),
+        notes=data.get('notes', ''),
+        teacher_id=data.get('teacher_id')
+    )
+    db.session.add(record)
     db.session.commit()
-    return jsonify({'message': 'Behavior record updated'})
-
-
-# Delete a behavior record
-@behavior_bp.route('/behavior/<int:behavior_id>', methods=['DELETE'])
-def delete_behavior(behavior_id):
-    behavior = Behavior.query.get_or_404(behavior_id)
-    db.session.delete(behavior)
-    db.session.commit()
-    return jsonify({'message': 'Behavior record deleted'})
-
-
-# Generate a behavior summary report for a student
-@behavior_bp.route('/students/<int:student_id>/behavior/report', methods=['GET'])
-def behavior_report(student_id):
-    behaviors = Behavior.query.filter_by(student_id=student_id).all()
-    total = len(behaviors)
-    positive = sum(1 for b in behaviors if b.behavior_type == 'positive')
-    negative = sum(1 for b in behaviors if b.behavior_type == 'negative')
-    score = positive - negative
-    return jsonify({
-        'student_id': student_id,
-        'total_entries': total,
-        'positive': positive,
-        'negative': negative,
-        'score': score
-    })
+    return jsonify({'message': 'Behavioral record added', 'behavior_id': record.behavior_id}), 201
