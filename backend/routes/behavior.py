@@ -4,7 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 from flask import Blueprint, request, jsonify
-from models import db, Behavior
+from models import db, behavior
 from datetime import date
 
 behavior_bp = Blueprint('behavior', __name__)
