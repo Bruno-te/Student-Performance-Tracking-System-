@@ -110,3 +110,14 @@ def log_attendance_batch():
         created += 1
     db.session.commit()
     return jsonify({'message': f'Batch attendance logged: {created} records'}), 201
+
+# PUT /api/attendance/<int:attendance_id>/confirm
+@attendance_bp.route('/<int:attendance_id>/confirm', methods=['PUT'])
+def confirm_attendance(attendance_id):
+    record = Attendance.query.get(attendance_id)
+    if not record:
+        return jsonify({'error': 'Attendance record not found'}), 404
+
+    record.status = 'Confirmed'
+    db.session.commit()
+    return jsonify({'message': f'Attendance ID {attendance_id} confirmed'}), 200
