@@ -101,24 +101,32 @@ def delete_participation(pid):
 # GET /api/participation/average-rating
 @participation_bp.route('/average-rating', methods=['GET'])
 def average_participation_rating():
-    rating_map = {
-        "Excellent": 5,
-        "Good": 4,
-        "Average": 3,
-        "Poor": 2,
-        "None": 1
-    }
-
     records = Participation.query.all()
     if not records:
         return jsonify({'average_rating': 0, 'message': 'No participation records found'}), 200
 
     ratings = []
     for p in records:
-        status = p.status.strip().capitalize()
-        score = rating_map.get(status)
-        if score:
-            ratings.append(score)
+        try:
+            # Try to parse status as a numeric rating (1-5)
+            rating = float(p.status.strip())
+            if 1 <= rating <= 5:
+                ratings.append(rating)
+        except (ValueError, AttributeError):
+            # If it's not a number, try to map string statuses to numeric values
+            status_map = {
+                "excellent": 5,
+                "good": 4,
+                "average": 3,
+                "fair": 3,
+                "poor": 2,
+                "none": 1,
+                "very good": 4,
+                "very poor": 1
+            }
+            status = p.status.strip().lower()
+            if status in status_map:
+                ratings.append(status_map[status])
 
     if not ratings:
         return jsonify({'average_rating': 0, 'message': 'No valid ratings found'}), 200
