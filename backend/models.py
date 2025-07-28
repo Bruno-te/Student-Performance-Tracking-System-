@@ -116,6 +116,8 @@ class Participation(db.Model):
     event_name = db.Column(db.String(100), nullable=False)
     date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), nullable=False)
+
+    remarks = db.Column(db.String(255))    
     remarks = db.Column(db.String(255))
 
 class TeacherClassSubject(db.Model):
@@ -145,6 +147,10 @@ class EmergencyContact(db.Model):
     last_name = db.Column(db.String(100))
     relationship = db.Column(db.String(50))
     contact = db.Column(db.String(15))
+
+
+    remarks = db.Column(db.String(255)) 
+
 class Parent(db.Model):
     __tablename__ = 'parents'
     parent_id = db.Column(db.Integer, primary_key=True)
@@ -154,3 +160,4 @@ class Parent(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('students.student_id'), nullable=False)
 
     student = db.relationship('Student', backref='parent', uselist=False)
+

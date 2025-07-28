@@ -1,5 +1,14 @@
+
 from models import User
 from flask import Flask, request, redirect, url_for, session, render_template_string, jsonify
+#importing the required Flask and libraries
+from flask import Flask, request, redirect, url_for, session, render_template_string
+
+#importing the required Flask and libraries
+from flask import Flask, request, redirect, url_for, session, render_template_string
+from models import User
+from flask import Flask, request, redirect, url_for, session, render_template_string, jsonify
+
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
@@ -13,6 +22,7 @@ from routes.participation import participation_bp
 from routes.behavioral import behavioral_bp
 from routes.admin import admin_bp
 
+#initialazing the flask application
 app = Flask(__name__)
 CORS(
     app,
@@ -30,12 +40,32 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 db.init_app(app)
 
-# -------------------- MODELS --------------------
 # (Model definitions removed. Use: from models import User, ...)
+# Define a user model for the users table
+class User(db.Model):
+    __tablename__ = 'users'
+    user_id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.Text, nullable=False)
+    role = db.Column(db.String(20), nullable=False)
+    email = db.Column(db.String(100))
+
+
+# -------------------- MODELS --------------------
+# Define a user model for the users table
+class User(db.Model):
+    __tablename__ = 'users'
+    user_id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.Text, nullable=False)
+    role = db.Column(db.String(20), nullable=False)
+    email = db.Column(db.String(100))
+# (Model definitions removed. Use: from models import User, ...)
+
 
 # -------------------- ROUTES --------------------
 
-# Sign-up page
+# Route for Sign-up page
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
