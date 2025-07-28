@@ -8,7 +8,7 @@ from routes.teacher_assignments import teacher_assignments_bp
 from routes.assessments import assessments_bp   
 from routes.behavioral import behavioral_bp
 from routes.assessments import assessments_bp  
-from routes.Behavioral import behavioral_bp
+from routes.behavioral import behavioral_bp
 
 from routes.assessments import assessments_bp
 from routes.participation import participation_bp 
