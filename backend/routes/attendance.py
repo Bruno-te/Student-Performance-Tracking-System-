@@ -116,9 +116,7 @@ def log_attendance_batch():
 def confirm_attendance(attendance_id):
     """Confirm a specific attendance record"""
     record = Attendance.query.get(attendance_id)
-    if not record:
-        return jsonify({'error': 'Attendance record not found'}), 404
-
+   
     # Check if already confirmed
     if record.status == 'Confirmed':
         return jsonify({'message': f'Attendance ID {attendance_id} is already confirmed'}), 200
