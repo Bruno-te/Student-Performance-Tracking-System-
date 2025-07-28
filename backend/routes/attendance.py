@@ -110,3 +110,23 @@ def log_attendance_batch():
         created += 1
     db.session.commit()
     return jsonify({'message': f'Batch attendance logged: {created} records'}), 201
+
+# PUT /api/attendance/<int:attendance_id>/confirm
+@attendance_bp.route('/<int:attendance_id>/confirm', methods=['PUT'])
+def confirm_attendance(attendance_id):
+    """Confirm a specific attendance record"""
+    record = Attendance.query.get(attendance_id)
+   
+    # Check if already confirmed
+    if record.status == 'Confirmed':
+        return jsonify({'message': f'Attendance ID {attendance_id} is already confirmed'}), 200
+
+    record.status = 'Confirmed'
+    db.session.commit()
+    return jsonify({
+      'message': f'All attendance records for class {class_id} on {date} confirmed',
+      'total_records': len(records),
+      'confirmed': confirmed_count,
+      'already_confirmed': already_confirmed_count
+    }), 200
+

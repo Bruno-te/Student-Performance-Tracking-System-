@@ -97,3 +97,31 @@ def delete_participation(pid):
     db.session.delete(participation)
     db.session.commit()
     return jsonify({'message': 'Participation deleted successfully'}), 200
+
+# GET /api/participation/average-rating
+@participation_bp.route('/average-rating', methods=['GET'])
+def average_participation_rating():
+    rating_map = {
+        "Excellent": 5,
+        "Good": 4,
+        "Average": 3,
+        "Poor": 2,
+        "None": 1
+    }
+
+    records = Participation.query.all()
+    if not records:
+        return jsonify({'average_rating': 0, 'message': 'No participation records found'}), 200
+
+    ratings = []
+    for p in records:
+        status = p.status.strip().capitalize()
+        score = rating_map.get(status)
+        if score:
+            ratings.append(score)
+
+    if not ratings:
+        return jsonify({'average_rating': 0, 'message': 'No valid ratings found'}), 200
+
+    avg_rating = round(sum(ratings) / len(ratings), 2)
+    return jsonify({'average_rating': avg_rating}), 200
