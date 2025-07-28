@@ -3,12 +3,14 @@ from models import db, Behavioral
 from datetime import datetime, date
 from sqlalchemy import and_, or_
 
-
 behavioral_bp = Blueprint('behavioral', __name__)
 
 @behavioral_bp.route('/', methods=['GET'])
 def get_behavioral():
+
 # Get query parameters for filtering
+    # Get query parameters for filtering
+
     student_id = request.args.get('student_id')
     behavior_type = request.args.get('behavior_type')
     category = request.args.get('category')
@@ -85,6 +87,47 @@ def get_behavioral_by_student(student_id):
         } for b in records
     ])
 
+
+@behavioral_bp.route('/stats/<student_id>', methods=['GET'])
+def get_behavioral_stats(student_id):
+    """Get behavioral statistics for a specific student"""
+    from sqlalchemy import func
+    
+    # Get counts by behavior type
+    stats = db.session.query(
+        Behavioral.behavior_type,
+        func.count(Behavioral.behavior_id).label('count')
+    ).filter(
+        Behavioral.student_id == student_id
+    ).group_by(Behavioral.behavior_type).all()
+    
+    # Get recent behavioral trends (last 30 days)
+    from datetime import timedelta
+    thirty_days_ago = date.today() - timedelta(days=30)
+    recent_records = Behavioral.query.filter(
+        and_(
+            Behavioral.student_id == student_id,
+            Behavioral.date >= thirty_days_ago
+        )
+    ).order_by(Behavioral.date.desc()).all()
+    
+    stats_dict = {stat.behavior_type: stat.count for stat in stats}
+    
+    return jsonify({
+        'student_id': student_id,
+        'total_records': sum(stats_dict.values()),
+        'behavior_counts': stats_dict,
+        'recent_behaviors': [
+            {
+                'behavior_id': b.behavior_id,
+                'date': b.date.isoformat(),
+                'behavior_type': b.behavior_type,
+                'category': b.category,
+                'notes': b.notes,
+                'teacher_id': b.teacher_id
+            } for b in recent_records[:10]  # Last 10 records
+        ]
+    })
 @behavioral_bp.route('/', methods=['POST'])
 def add_behavioral():
     data = request.get_json()
@@ -96,7 +139,10 @@ def add_behavioral():
     if not data.get('category'):
             return jsonify({'error': 'category is required'}), 400
         
+
+    record = Behavioral
     record = Behavioral(
+
             student_id=data['student_id'],
             date=datetime.fromisoformat(data['date']).date() if data.get('date') else date.today(),
             behavior_type=data.get('behavior_type', 'positive'),
@@ -104,7 +150,7 @@ def add_behavioral():
             notes=data.get('notes', ''),
             teacher_id=data.get('teacher_id')
         )
-        
+
     db.session.add(record)
     db.session.commit()
     return jsonify({
@@ -115,6 +161,7 @@ def add_behavioral():
             'behavior_type': record.behavior_type,
             'category': record.category
         }), 201
+
 @behavioral_bp.route('/<int:behavior_id>', methods=['PUT'])
 def update_behavioral(behavior_id):
     """Update an existing behavioral record"""
@@ -159,4 +206,7 @@ def delete_behavioral(behavior_id):
         
     except Exception as e:
         db.session.rollback()
+
         return jsonify({'error': f'Failed to delete behavioral record: {str(e)}'}), 500    
+
+    

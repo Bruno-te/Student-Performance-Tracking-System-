@@ -7,6 +7,8 @@ from routes.attendance import attendance_bp
 from routes.teacher_assignments import teacher_assignments_bp
 from routes.assessments import assessments_bp   
 from routes.behavioral import behavioral_bp
+from routes.assessments import assessments_bp  
+from routes.Behavioral import behavioral_bp
 
 from routes.assessments import assessments_bp
 from routes.participation import participation_bp 
@@ -23,6 +25,7 @@ app.register_blueprint(attendance_bp, url_prefix='/attendance')
 app.register_blueprint(teacher_assignments_bp, url_prefix='/api/teacher-assignments')
 app.register_blueprint(assessments_bp, url_prefix='/api/assessments')
 app.register_blueprint(behavioral_bp, url_prefix='/api/behavioral')
+app.register_blueprint(behavioral_bp, url_prefix='/api/behavioral') 
 app.register_blueprint(participation_bp, url_prefix='/api/participation')
 # main
 
