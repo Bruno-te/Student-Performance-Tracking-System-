@@ -8,7 +8,10 @@ behavioral_bp = Blueprint('behavioral', __name__)
 @behavioral_bp.route('/', methods=['GET'])
 def get_behavioral():
 
+
 # Get query parameters for filtering
+    # Get query parameters for filtering
+
     # Get query parameters for filtering
 
     student_id = request.args.get('student_id')
@@ -49,6 +52,7 @@ def get_behavioral():
     
     # Order by date descending (most recent first)
     records = query.order_by(Behavioral.date.desc()).all()
+
     return jsonify([
         {
             'behavior_id': b.behavior_id,
@@ -73,6 +77,7 @@ def get_behavioral_by_student(student_id):
     
     records = query.all()
     
+
     return jsonify([
         {
             'behavior_id': b.behavior_id,
@@ -137,10 +142,11 @@ def add_behavioral():
             return jsonify({'error': 'student_id is required'}), 400
         
     if not data.get('category'):
-            return jsonify({'error': 'category is required'}), 400
+     return jsonify({'error': 'category is required'}), 400
         
 
-    record = Behavioral
+
+
     record = Behavioral(
 
             student_id=data['student_id'],
@@ -150,6 +156,8 @@ def add_behavioral():
             notes=data.get('notes', ''),
             teacher_id=data.get('teacher_id')
         )
+
+
 
     db.session.add(record)
     db.session.commit()
@@ -206,6 +214,7 @@ def delete_behavioral(behavior_id):
         
     except Exception as e:
         db.session.rollback()
+
 
         return jsonify({'error': f'Failed to delete behavioral record: {str(e)}'}), 500    
 

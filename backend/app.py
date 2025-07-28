@@ -25,7 +25,7 @@ app.register_blueprint(attendance_bp, url_prefix='/attendance')
 app.register_blueprint(teacher_assignments_bp, url_prefix='/api/teacher-assignments')
 app.register_blueprint(assessments_bp, url_prefix='/api/assessments')
 app.register_blueprint(behavioral_bp, url_prefix='/api/behavioral')
-app.register_blueprint(behavioral_bp, url_prefix='/api/behavioral') 
+
 app.register_blueprint(participation_bp, url_prefix='/api/participation')
 # main
 
